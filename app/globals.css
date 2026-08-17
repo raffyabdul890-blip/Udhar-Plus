@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    /* Bumps the rem baseline from 16px to 18px so every Tailwind rem-based
+       utility scales up for senior-friendly readability (see FRONTEND_UI.md). */
+    font-size: 112.5%;
+  }
+
+  body {
+    @apply bg-brand-black text-brand-white antialiased;
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    @apply outline outline-2 outline-offset-2 outline-brand-white;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
