@@ -5,11 +5,40 @@ and every offline cache as sensitive financial data by default.
 
 ## 1. Authentication: Phone Number + OTP
 
-There is **no 4-digit PIN gate**. Authentication is Supabase Auth's Phone Number + OTP flow only
-(`app/login/page.tsx`), plus standard Logout (`components/auth/LogoutButton.tsx`). `proxy.ts` (Next 16's
-renamed `middleware.ts`) refreshes the session cookie on every request and redirects unauthenticated
-requests to `/login`, but this is an optimistic check only — real authorization still happens per-request
-via RLS (see §2) and `lib/supabase/server.ts` reading the session close to the data.
+There is **no 4-digit PIN gate**. Authentication is OTP-only (`app/login/page.tsx`) via two channels,
+plus standard Logout (`components/auth/LogoutButton.tsx`). `proxy.ts` (Next 16's renamed `middleware.ts`)
+refreshes the session cookie on every request and redirects unauthenticated requests to `/login`, but this
+is an optimistic check only — real authorization still happens per-request via RLS (see §2) and
+`lib/supabase/server.ts` reading the session close to the data. Route Handlers under `app/api/` are
+excluded from proxy's redirect (they authorize themselves, per Next's own guidance) — any new route added
+there must do its own auth check if it needs one; nothing does today except the bridge below, which is
+deliberately unauthenticated since its whole job is to establish the first session.
+
+### Email
+Standard Supabase Auth OTP (`supabase.auth.signInWithOtp`/`verifyOtp`, `type: 'email'`). Whether Supabase
+actually sends a 6-digit code vs. a magic link is controlled by the **email template configured in the
+Supabase Auth dashboard**, not by client code — `emailRedirectTo: undefined` in the client call signals
+OTP-only intent but doesn't enforce it on its own; confirm the dashboard template is set to send the code.
+
+### Phone — Firebase bridge
+Phone verification uses **Firebase Phone Auth** (`RecaptchaVerifier` + `signInWithPhoneNumber`,
+`lib/firebase/client.ts`), not Supabase's own SMS provider. Because every table's `user_id` is a foreign
+key to `auth.users(id)` and RLS is keyed on `auth.uid()`, the Firebase-verified identity must become a
+**real Supabase Auth user**, not just a passed-through third-party JWT — Supabase's own "Third-Party Auth"
+Firebase integration was considered and rejected for this reason (it never creates an `auth.users` row).
+
+The bridge (`app/api/auth/firebase-phone/route.ts`):
+1. Verifies the Firebase ID token server-side against Firebase's public JWKS via `jose` — no
+   `firebase-admin` SDK / service-account JSON needed, deliberately avoiding that extra secret.
+2. Checks `firebase.sign_in_provider === 'phone'` and reads the verified `phone_number` claim — the
+   request body's own claims are never trusted for identity, only the token's verified payload.
+3. Uses the `service_role` key (`lib/supabase/admin.ts`, `server-only`-guarded, never client-shipped —
+   same rule as the anon key's counterpart below) to find-or-create that Supabase user and mint a session
+   by setting a random one-time password server-side then calling `signInWithPassword` — the standard
+   workaround for "create a session for user X" server-side, since no direct admin API for that exists.
+
+**Known gap:** the existing-user lookup (`admin.auth.admin.listUsers`) has no phone filter, so it scans
+one page of up to 1000 users. Revisit if the user base approaches that.
 
 Logout must fully clear both Supabase's session (`supabase.auth.signOut()`) and the local IndexedDB
 database (`wipeLocalDatabase()` in `lib/db/offlineStorage.ts`) so a shared/family device never retains a
