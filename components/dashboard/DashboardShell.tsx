@@ -30,15 +30,11 @@ type ActiveModal =
 
 export default function DashboardShell({
   userId,
-  phone,
-  email,
   fullName,
   shopName,
   onboardingCompleted: initialOnboardingCompleted,
 }: {
   userId: string;
-  phone: string | null;
-  email: string | null;
   fullName: string | null;
   shopName: string | null;
   onboardingCompleted: boolean;
@@ -108,7 +104,6 @@ export default function DashboardShell({
 
   const needsOnboarding = !onboardingCompleted;
   const primaryLabel = shopName ?? fullName ?? "Udhar Plus";
-  const secondaryLabel = shopName ? (fullName ?? undefined) : (phone ?? email ?? undefined);
 
   const openCustomer = modal.kind === "customer-txn" ? customers.find((c) => c.id === modal.customerId) : undefined;
   const openAccount = modal.kind === "bank-txn" ? bankAccounts.find((b) => b.id === modal.accountId) : undefined;
@@ -116,7 +111,7 @@ export default function DashboardShell({
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col gap-4 px-4 py-6">
       <div className="sticky top-0 z-10 -mx-4 flex flex-col gap-3 bg-brand-black px-4 py-3">
-        <TopNavbar primaryLabel={primaryLabel} secondaryLabel={secondaryLabel} />
+        <TopNavbar primaryLabel={primaryLabel} />
         <SearchBar value={search} onChange={setSearch} />
         {!isSearching && <ModuleSwitcher active={module} onChange={setModule} />}
       </div>

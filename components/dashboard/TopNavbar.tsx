@@ -1,20 +1,11 @@
 import LogoutButton from "@/components/auth/LogoutButton";
 
-export default function TopNavbar({
-  primaryLabel,
-  secondaryLabel,
-}: {
-  primaryLabel: string;
-  secondaryLabel?: string;
-}) {
+export default function TopNavbar({ primaryLabel }: { primaryLabel: string }) {
   return (
     <div className="flex items-center justify-between gap-4">
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <span className="truncate text-senior-xl font-bold text-brand-white">{primaryLabel}</span>
-        {secondaryLabel && (
-          <span className="truncate text-senior-sm text-brand-white/70">{secondaryLabel}</span>
-        )}
-      </div>
+      <span className="flex-1 truncate text-senior-xl font-bold text-brand-white">
+        {primaryLabel}
+      </span>
       <LogoutButton />
     </div>
   );

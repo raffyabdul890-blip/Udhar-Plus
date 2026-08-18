@@ -21,8 +21,6 @@ export default async function Home() {
   return (
     <DashboardShell
       userId={user.id}
-      phone={user.phone ?? null}
-      email={user.email ?? null}
       fullName={metadata?.full_name ?? null}
       shopName={metadata?.shop_name ?? null}
       onboardingCompleted={metadata?.onboarding_completed === true}
