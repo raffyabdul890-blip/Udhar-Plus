@@ -12,7 +12,11 @@ export default async function Home() {
     redirect("/login");
   }
 
-  const metadata = user.user_metadata as { full_name?: string; shop_name?: string } | null;
+  const metadata = user.user_metadata as {
+    full_name?: string;
+    shop_name?: string;
+    onboarding_completed?: boolean;
+  } | null;
 
   return (
     <DashboardShell
@@ -21,6 +25,7 @@ export default async function Home() {
       email={user.email ?? null}
       fullName={metadata?.full_name ?? null}
       shopName={metadata?.shop_name ?? null}
+      onboardingCompleted={metadata?.onboarding_completed === true}
     />
   );
 }

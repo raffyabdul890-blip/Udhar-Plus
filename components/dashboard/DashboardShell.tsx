@@ -19,6 +19,7 @@ import {
   type LocalCustomer,
   type LocalTransaction,
 } from "@/lib/db/offlineStorage";
+import { isOnboardingCompleteLocally } from "@/lib/onboarding";
 
 type ActiveModal =
   | { kind: "none" }
@@ -33,15 +34,18 @@ export default function DashboardShell({
   email,
   fullName: initialFullName,
   shopName: initialShopName,
+  onboardingCompleted: initialOnboardingCompleted,
 }: {
   userId: string;
   phone: string | null;
   email: string | null;
   fullName: string | null;
   shopName: string | null;
+  onboardingCompleted: boolean;
 }) {
   const [fullName, setFullName] = useState(initialFullName);
   const [shopName, setShopName] = useState(initialShopName);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(initialOnboardingCompleted);
   const [module, setModule] = useState<DashboardModule>("customers");
   const [search, setSearch] = useState("");
   const [customers, setCustomers] = useState<LocalCustomer[]>([]);
@@ -69,6 +73,17 @@ export default function DashboardShell({
     reload();
   }, [reload]);
 
+  useEffect(() => {
+    // Checked post-mount (not in a lazy useState initializer) to avoid a hydration
+    // mismatch — the server-rendered value always matches the first client render,
+    // then this corrects it a moment later if localStorage says otherwise (e.g. a
+    // skip that was saved locally before a Supabase metadata write could land).
+    if (!onboardingCompleted && isOnboardingCompleteLocally(userId)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setOnboardingCompleted(true);
+    }
+  }, [onboardingCompleted, userId]);
+
   const query = search.trim().toLowerCase();
   const isSearching = query.length > 0;
 
@@ -93,7 +108,7 @@ export default function DashboardShell({
     );
   }, [bankAccounts, query]);
 
-  const needsOnboarding = !fullName;
+  const needsOnboarding = !onboardingCompleted;
   const primaryLabel = shopName ?? fullName ?? "Udhar Plus";
   const secondaryLabel = shopName ? (fullName ?? undefined) : (phone ?? email ?? undefined);
 
@@ -209,9 +224,11 @@ export default function DashboardShell({
 
       {needsOnboarding && (
         <OnboardingModal
+          userId={userId}
           onComplete={({ fullName: newFullName, shopName: newShopName }) => {
-            setFullName(newFullName);
-            setShopName(newShopName);
+            if (newFullName) setFullName(newFullName);
+            if (newShopName) setShopName(newShopName);
+            setOnboardingCompleted(true);
           }}
         />
       )}
