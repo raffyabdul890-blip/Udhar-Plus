@@ -31,9 +31,15 @@ export default function CustomerCardSkeleton() {
 }
 
 /** List of card skeletons — announces loading once for the whole list. */
-export function CustomerCardSkeletonList({ count = 4 }: { count?: number }) {
+export function CustomerCardSkeletonList({
+  count = 4,
+  label = "Loading customers",
+}: {
+  count?: number;
+  label?: string;
+}) {
   return (
-    <div role="status" aria-label="Loading customers" className="flex flex-col gap-3">
+    <div role="status" aria-label={label} className="flex flex-col gap-3">
       {Array.from({ length: count }).map((_, i) => (
         <CustomerCardShape key={i} />
       ))}
