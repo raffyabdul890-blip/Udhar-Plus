@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import LogoutButton from "@/components/auth/LogoutButton";
+import OnboardingModal from "@/components/auth/OnboardingModal";
+import TopNavbar from "@/components/dashboard/TopNavbar";
 import SearchBar from "@/components/dashboard/SearchBar";
 import ModuleSwitcher, { type DashboardModule } from "@/components/dashboard/ModuleSwitcher";
 import CustomerList from "@/components/customers/CustomerList";
@@ -22,17 +23,25 @@ import {
 type ActiveModal =
   | { kind: "none" }
   | { kind: "add-customer" }
-  | { kind: "customer-txn"; customer: LocalCustomer }
+  | { kind: "customer-txn"; customerId: string }
   | { kind: "add-bank" }
-  | { kind: "bank-txn"; account: LocalBankAccount };
+  | { kind: "bank-txn"; accountId: string };
 
 export default function DashboardShell({
   userId,
-  identityLabel,
+  phone,
+  email,
+  fullName: initialFullName,
+  shopName: initialShopName,
 }: {
   userId: string;
-  identityLabel: string;
+  phone: string | null;
+  email: string | null;
+  fullName: string | null;
+  shopName: string | null;
 }) {
+  const [fullName, setFullName] = useState(initialFullName);
+  const [shopName, setShopName] = useState(initialShopName);
   const [module, setModule] = useState<DashboardModule>("customers");
   const [search, setSearch] = useState("");
   const [customers, setCustomers] = useState<LocalCustomer[]>([]);
@@ -84,17 +93,17 @@ export default function DashboardShell({
     );
   }, [bankAccounts, query]);
 
+  const needsOnboarding = !fullName;
+  const primaryLabel = shopName ?? fullName ?? "Udhar Plus";
+  const secondaryLabel = shopName ? (fullName ?? undefined) : (phone ?? email ?? undefined);
+
+  const openCustomer = modal.kind === "customer-txn" ? customers.find((c) => c.id === modal.customerId) : undefined;
+  const openAccount = modal.kind === "bank-txn" ? bankAccounts.find((b) => b.id === modal.accountId) : undefined;
+
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col gap-4 px-4 py-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-senior-2xl font-bold text-brand-white">Udhar Plus</h1>
-          <p className="truncate text-senior-sm text-brand-white/70">{identityLabel}</p>
-        </div>
-        <LogoutButton />
-      </div>
-
       <div className="sticky top-0 z-10 -mx-4 flex flex-col gap-3 bg-brand-black px-4 py-3">
+        <TopNavbar primaryLabel={primaryLabel} secondaryLabel={secondaryLabel} />
         <SearchBar value={search} onChange={setSearch} />
         {!isSearching && <ModuleSwitcher active={module} onChange={setModule} />}
       </div>
@@ -110,7 +119,7 @@ export default function DashboardShell({
                 customers={matchedCustomers}
                 transactions={transactions}
                 loading={false}
-                onSelectCustomer={(customer) => setModal({ kind: "customer-txn", customer })}
+                onSelectCustomer={(customer) => setModal({ kind: "customer-txn", customerId: customer.id })}
               />
             )}
           </section>
@@ -123,7 +132,7 @@ export default function DashboardShell({
               <BankList
                 accounts={matchedBankAccounts}
                 loading={false}
-                onSelectAccount={(account) => setModal({ kind: "bank-txn", account })}
+                onSelectAccount={(account) => setModal({ kind: "bank-txn", accountId: account.id })}
               />
             )}
           </section>
@@ -133,13 +142,13 @@ export default function DashboardShell({
           customers={customers}
           transactions={transactions}
           loading={loading}
-          onSelectCustomer={(customer) => setModal({ kind: "customer-txn", customer })}
+          onSelectCustomer={(customer) => setModal({ kind: "customer-txn", customerId: customer.id })}
         />
       ) : (
         <BankList
           accounts={bankAccounts}
           loading={loading}
-          onSelectAccount={(account) => setModal({ kind: "bank-txn", account })}
+          onSelectAccount={(account) => setModal({ kind: "bank-txn", accountId: account.id })}
         />
       )}
 
@@ -162,11 +171,18 @@ export default function DashboardShell({
           onAdded={reload}
         />
       )}
-      {modal.kind === "customer-txn" && (
+      {modal.kind === "customer-txn" && openCustomer && (
         <CustomerTransactionModal
-          customer={modal.customer}
+          customer={openCustomer}
+          transactions={transactions.filter(
+            (t) => t.entity_type === "customer" && t.entity_id === openCustomer.id
+          )}
           onClose={() => setModal({ kind: "none" })}
           onSaved={reload}
+          onDeleted={() => {
+            setModal({ kind: "none" });
+            reload();
+          }}
         />
       )}
       {modal.kind === "add-bank" && (
@@ -176,11 +192,27 @@ export default function DashboardShell({
           onAdded={reload}
         />
       )}
-      {modal.kind === "bank-txn" && (
+      {modal.kind === "bank-txn" && openAccount && (
         <BankTransactionModal
-          account={modal.account}
+          account={openAccount}
+          transactions={transactions.filter(
+            (t) => t.entity_type === "bank" && t.entity_id === openAccount.id
+          )}
           onClose={() => setModal({ kind: "none" })}
           onSaved={reload}
+          onDeleted={() => {
+            setModal({ kind: "none" });
+            reload();
+          }}
+        />
+      )}
+
+      {needsOnboarding && (
+        <OnboardingModal
+          onComplete={({ fullName: newFullName, shopName: newShopName }) => {
+            setFullName(newFullName);
+            setShopName(newShopName);
+          }}
         />
       )}
     </div>

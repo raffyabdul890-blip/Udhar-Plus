@@ -12,7 +12,15 @@ export default async function Home() {
     redirect("/login");
   }
 
+  const metadata = user.user_metadata as { full_name?: string; shop_name?: string } | null;
+
   return (
-    <DashboardShell userId={user.id} identityLabel={user.phone ?? user.email ?? "Signed in"} />
+    <DashboardShell
+      userId={user.id}
+      phone={user.phone ?? null}
+      email={user.email ?? null}
+      fullName={metadata?.full_name ?? null}
+      shopName={metadata?.shop_name ?? null}
+    />
   );
 }

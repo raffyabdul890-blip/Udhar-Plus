@@ -1,9 +1,13 @@
 import {
   addTransaction,
+  deleteBankAccount,
+  deleteCustomer,
+  deleteTransaction,
   updateBankAccount,
   updateCustomer,
   type LocalBankAccount,
   type LocalCustomer,
+  type LocalTransaction,
 } from "./offlineStorage";
 
 /**
@@ -71,4 +75,62 @@ export async function recordBankTransaction(
   await updateBankAccount(account.id, {
     current_balance: account.current_balance + delta,
   });
+}
+
+/** Deletes one customer entry and reverses its effect on the running balance. */
+export async function deleteCustomerTransactionEntry(
+  customer: LocalCustomer,
+  transaction: LocalTransaction
+): Promise<void> {
+  const reverseDelta = transaction.type === "OUT" ? -transaction.amount : transaction.amount;
+
+  await deleteTransaction(transaction.id, customer.user_id);
+  await updateCustomer(customer.id, {
+    current_balance: customer.current_balance + reverseDelta,
+  });
+}
+
+/** Deletes one bank/wallet entry and reverses its effect on the running balance. */
+export async function deleteBankTransactionEntry(
+  account: LocalBankAccount,
+  transaction: LocalTransaction
+): Promise<void> {
+  const reverseDelta = transaction.type === "IN" ? -transaction.amount : transaction.amount;
+
+  await deleteTransaction(transaction.id, account.user_id);
+  await updateBankAccount(account.id, {
+    current_balance: account.current_balance + reverseDelta,
+  });
+}
+
+/**
+ * Deletes a customer and every transaction tied to them — `transactions` has no
+ * DB-level cascade (entity_id is polymorphic across customers/bank_accounts), so
+ * the app deletes the history explicitly to avoid orphaned rows once synced.
+ */
+export async function deleteCustomerWithHistory(
+  customer: LocalCustomer,
+  transactions: LocalTransaction[]
+): Promise<void> {
+  const related = transactions.filter(
+    (t) => t.entity_type === "customer" && t.entity_id === customer.id
+  );
+  for (const txn of related) {
+    await deleteTransaction(txn.id, customer.user_id);
+  }
+  await deleteCustomer(customer.id, customer.user_id);
+}
+
+/** Same cascade as {@link deleteCustomerWithHistory}, for bank/wallet accounts. */
+export async function deleteBankAccountWithHistory(
+  account: LocalBankAccount,
+  transactions: LocalTransaction[]
+): Promise<void> {
+  const related = transactions.filter(
+    (t) => t.entity_type === "bank" && t.entity_id === account.id
+  );
+  for (const txn of related) {
+    await deleteTransaction(txn.id, account.user_id);
+  }
+  await deleteBankAccount(account.id, account.user_id);
 }

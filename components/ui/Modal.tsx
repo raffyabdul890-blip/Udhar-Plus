@@ -5,24 +5,28 @@ import { useEffect, type ReactNode } from "react";
 export default function Modal({
   title,
   onClose,
+  dismissable = true,
   children,
 }: {
   title: string;
   onClose: () => void;
+  /** Set false for required flows (e.g. onboarding) — hides the close button and disables Escape/backdrop dismissal. */
+  dismissable?: boolean;
   children: ReactNode;
 }) {
   useEffect(() => {
+    if (!dismissable) return;
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") onClose();
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, [onClose, dismissable]);
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center sm:p-4"
-      onClick={onClose}
+      onClick={dismissable ? onClose : undefined}
     >
       <div
         role="dialog"
@@ -35,14 +39,16 @@ export default function Modal({
           <h2 id="modal-title" className="text-senior-lg font-bold text-brand-white">
             {title}
           </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="flex min-h-tap min-w-tap items-center justify-center rounded-xl text-senior-lg font-bold text-brand-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
-          >
-            ×
-          </button>
+          {dismissable && (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className="flex min-h-tap min-w-tap items-center justify-center rounded-xl text-senior-lg font-bold text-brand-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
+            >
+              ×
+            </button>
+          )}
         </div>
         {children}
       </div>
