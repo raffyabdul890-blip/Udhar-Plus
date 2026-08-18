@@ -18,8 +18,8 @@ received, and see a running balance — reliably, even offline.
 | Language | TypeScript | Strict mode on |
 | Styling | Tailwind CSS (v3, `tailwind.config.ts`) | See `FRONTEND_UI.md` for tokens |
 | Backend / DB | Supabase (Postgres + Auth + Storage) | RLS-enforced, see `SECURITY.md` |
-| Auth | Supabase Auth (phone/email) + local 4-digit PIN gate | PIN is an app-level re-entry lock, not a replacement for Supabase auth |
-| Offline storage | IndexedDB (via `idb` or `Dexie`) | Encrypted at rest, see `SECURITY.md` |
+| Auth | Supabase Auth — Phone Number + OTP only | No PIN gate; session + Logout are the only auth surfaces |
+| Offline storage | IndexedDB via `Dexie.js` | Dual-storage: instant local read/write, background auto-sync to Supabase |
 | PWA | Web App Manifest + Service Worker (`next-pwa` or hand-rolled) | Installable, offline-capable shell |
 | Hosting | Vercel (recommended) | Supabase project already provisioned |
 | State/data fetching | Server Components + Supabase JS client, React Query for client-side caching where needed | |
@@ -39,11 +39,12 @@ received, and see a running balance — reliably, even offline.
 - Base layout, global styles, PWA metadata shell
 - Skeleton loading components (`CustomerCardSkeleton`, `BalanceCardSkeleton`)
 
-### Phase 1 — Auth & Security Gate
-- Supabase Auth integration (sign up / sign in)
-- 4-digit Security PIN setup + verification flow (see `SECURITY.md`)
-- Session handling, auto-lock on inactivity
-- Row Level Security policies applied to all tables
+### Phase 1 — Database Schema, OTP Auth & Offline Engine (complete)
+- `customers`, `bank_accounts`, `transactions` tables + RLS policies (`supabase/schema.sql`)
+- Phone Number + OTP login (`app/login/page.tsx`) and Logout — no PIN gate
+- Local IndexedDB manager via Dexie (`lib/db/offlineStorage.ts`) for sub-10ms reads/writes
+- Background sync engine (`lib/sync/syncEngine.ts`): pushes pending offline writes to Supabase on
+  reconnect, and rehydrates local IndexedDB from Supabase on fresh login
 
 ### Phase 2 — Core Ledger (Customers & Udhar Entries)
 - Customer CRUD (name, phone, photo optional, notes)
@@ -78,19 +79,20 @@ received, and see a running balance — reliably, even offline.
 
 ## 5. Core Features (MVP scope: Phases 0–3)
 
-- Email/phone login via Supabase Auth
-- 4-digit PIN app-lock on top of Supabase session
-- Add/edit/delete customer
-- Record "gave credit" and "received payment" entries
-- Per-customer running balance, full transaction history
+- Phone Number + OTP login via Supabase Auth (no PIN gate)
+- Top Search Bar: instant search across customer names, bank titles, account numbers, amounts, notes
+- Module A (Retailer Khata): add/edit/delete customer, "Diye"/"Milay" transaction entries, running balance
+- Module B (Bank & Wallet Cash Flow Manager): Pakistani commercial banks + digital wallets (Meezan, HBL,
+  UBL, MCB, Allied, BOP, Easypaisa, JazzCash, SadaPay, NayaPay, …), Cash IN/OUT tracking per account
+- Per-entity running balance, full transaction history
 - Dashboard totals (outstanding, collected this month)
 - Works offline: view cached data, queue new entries, auto-sync when back online
 - Installable as a home-screen PWA
 
 ## 6. Primary User Flows
 
-1. **Onboarding**: Sign up → verify → set 4-digit PIN → land on dashboard.
-2. **Re-entry**: Open app → enter 4-digit PIN (Supabase session already valid) → dashboard.
+1. **Onboarding**: Enter phone number → enter OTP → local IndexedDB hydrates from Supabase → dashboard.
+2. **Re-entry**: Open app → valid Supabase session → straight to dashboard (offline data already local).
 3. **Add customer**: Dashboard → "+ New Customer" → name/phone → save → customer card appears.
 4. **Record udhar given**: Customer profile → "Give Udhar" → amount + optional note → save → balance updates.
 5. **Record payment received**: Customer profile → "Received Payment" → amount → save → balance decreases.
@@ -103,20 +105,24 @@ received, and see a running balance — reliably, even offline.
 
 ```
 app/
-  (auth)/            route group: login, signup, pin-setup, pin-lock
-  (dashboard)/       route group: dashboard, customers, reports
+  login/             Phone Number + OTP login page
   api/               route handlers (webhooks, server actions helpers)
   layout.tsx
   globals.css
+proxy.ts             session refresh + route protection (Next 16 renamed middleware)
 components/
   ui/                generic primitives (Button, Card, Input)
   skeletons/          loading-state components
+  auth/               LogoutButton and other auth UI
+  sync/               SyncManagerMount (background sync bootstrap)
   customers/          customer-specific components
 lib/
-  supabase/           client + server Supabase clients
-  offline/            IndexedDB helpers, sync queue
-  security/           PIN hashing, encryption helpers
+  supabase/           browser + server Supabase clients
+  db/                 offlineStorage.ts — Dexie/IndexedDB CRUD
+  sync/               syncEngine.ts — background auto-sync + cloud rehydration
 types/                shared TypeScript types
+supabase/
+  schema.sql          tables + RLS policies
 ```
 
 ## 8. Deployment Notes

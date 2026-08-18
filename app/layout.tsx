@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import SyncManagerMount from "@/components/sync/SyncManagerMount";
 import "./globals.css";
 
 const inter = Inter({
@@ -40,6 +41,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <body className="min-h-screen bg-brand-black font-sans text-brand-white">
+        <SyncManagerMount />
         {children}
       </body>
     </html>

@@ -3,41 +3,24 @@
 Udhar Plus stores real financial relationships between shopkeepers and their customers. Treat every table
 and every offline cache as sensitive financial data by default.
 
-## 1. 4-Digit Security PIN Workflow
+## 1. Authentication: Phone Number + OTP
 
-The PIN is an **app-level re-entry lock** layered on top of Supabase Auth — it is not a replacement for
-proper authentication, and it is never sent to or verified against a server on every unlock (that would be
-slow offline and create a brute-force oracle). Verification happens locally against a securely stored hash.
+There is **no 4-digit PIN gate**. Authentication is Supabase Auth's Phone Number + OTP flow only
+(`app/login/page.tsx`), plus standard Logout (`components/auth/LogoutButton.tsx`). `proxy.ts` (Next 16's
+renamed `middleware.ts`) refreshes the session cookie on every request and redirects unauthenticated
+requests to `/login`, but this is an optimistic check only — real authorization still happens per-request
+via RLS (see §2) and `lib/supabase/server.ts` reading the session close to the data.
 
-### Setup
-1. After first successful Supabase Auth sign-in, prompt the user to create a 4-digit PIN (confirm twice).
-2. Reject trivially weak PINs: `0000`, `1111`…`9999`, `1234`, `4321`, and any PIN matching the user's known
-   birth year/phone digits if available.
-3. Derive a key from the PIN using **PBKDF2 (≥ 210,000 iterations, SHA-256)** or **Argon2id** if a WASM
-   implementation is available, with a random 16-byte salt stored alongside the (non-secret) salt value.
-4. Store only the derived hash + salt locally (IndexedDB, see §3) — never the raw PIN, never in
-   `localStorage` (unencrypted, XSS-readable), never logged, never sent to Supabase.
+Logout must fully clear both Supabase's session (`supabase.auth.signOut()`) and the local IndexedDB
+database (`wipeLocalDatabase()` in `lib/db/offlineStorage.ts`) so a shared/family device never retains a
+previous user's ledger data — see §3.
 
-### Verification (app unlock)
-1. On app foreground/launch, if a valid Supabase session exists, show the PIN entry screen instead of the
-   login screen.
-2. Hash the entered PIN with the stored salt and compare (constant-time comparison) to the stored hash.
-3. **Lockout policy**: after **5 consecutive failed attempts**, lock PIN entry for **30 seconds**, doubling
-   for each subsequent failed batch of 5 (capped at 30 minutes) — protects against brute force (only 10,000
-   possible 4-digit PINs).
-4. After **10 total failed attempts** in a lockout cycle, force full re-authentication via Supabase Auth
-   (email/phone) before allowing another PIN attempt.
-5. Successful PIN entry unlocks the local encryption key used for IndexedDB (see §3) — the PIN is not just
-   a gate, it is part of the key-derivation chain for offline data.
-
-### Session & re-lock
-- Auto-lock (require PIN again) after **5 minutes** of app inactivity or whenever the app returns from
-  background on mobile.
-- "Forgot PIN" flow requires full Supabase re-authentication and issues a new PIN + new local encryption
-  key — old encrypted offline data that can't be re-derived is discarded, never silently decrypted with a
-  fallback key.
-- Never allow disabling the PIN entirely while offline transactions/cached financial data are stored on
-  device.
+**Known gap (tracked, not silently dropped):** the previous PIN-based design derived the offline
+IndexedDB encryption key from the PIN (old §1/§3). With the PIN removed, offline data is currently
+**stored unencrypted** in IndexedDB — acceptable short-term since it was never part of the Phase 1 scope,
+but §3 below must be revisited before shipping cached financial data more broadly (e.g. a device-bound
+key via Web Crypto `nonextractable` keys, or a lightweight app-level lock reintroduced purely for
+key-derivation, not as an auth gate).
 
 ## 2. Supabase Row Level Security (RLS)
 
@@ -94,19 +77,23 @@ create policy "owner can delete own customers"
 
 ## 3. Offline IndexedDB Encryption Standard
 
+**Current status (Phase 1, `lib/db/offlineStorage.ts`): not yet implemented — see the Known gap in §1.**
+The standard below is the target to implement once a key-derivation source is decided; ship it before
+this cached data grows beyond the current schema (customers, bank accounts, transactions).
+
 The app must remain usable offline, which means customer names, phone numbers, and balances are cached on
 device outside of Supabase's protection. This data must be encrypted at rest.
 
 - **Algorithm**: AES-GCM, 256-bit key, via the browser's native **Web Crypto API** (`crypto.subtle`) — no
   custom/hand-rolled crypto.
-- **Key derivation**: the AES key is derived from the user's PIN (§1) using PBKDF2/Argon2id, never stored
-  in plaintext in IndexedDB, `localStorage`, or `sessionStorage`. The key exists only in memory after a
-  successful unlock and is discarded on lock/backgrounding.
+- **Key derivation**: source **TBD now that the PIN gate is removed** (§1) — candidates are a
+  non-extractable Web Crypto key bound to the device, or a key derived from the Supabase session itself.
+  Whatever is chosen, never store the key in plaintext in IndexedDB, `localStorage`, or `sessionStorage`.
 - **Per-record nonce**: a fresh random 12-byte IV per encrypted record; never reuse an IV with the same key.
 - **What is encrypted**: customer records, transaction/ledger entries, balances, any cached report data —
   i.e., all business data. Non-sensitive UI state (theme, last-visited route) may remain unencrypted.
-- **What is never cached offline**: the user's Supabase auth password, the raw PIN, or the service role
-  key (which never reaches the client at all).
+- **What is never cached offline**: the user's Supabase auth credentials, or the service role key (which
+  never reaches the client at all).
 - **Sync queue**: pending offline writes are stored encrypted with the same scheme; on reconnect, decrypt
   in memory, push to Supabase over TLS, then clear the local queue entry only after server confirmation.
 - **Wipe on logout**: full Supabase sign-out clears the IndexedDB database entirely (not just the in-memory
@@ -120,8 +107,8 @@ device outside of Supabase's protection. This data must be encrypted at rest.
 - **No third-party trackers/analytics SDKs** that read financial or contact data. If product analytics are
   added later, use event-level (not PII-attached) tracking and document it here before shipping.
 - **Consent & transparency**: on first launch, disclose what is stored locally vs. synced to Supabase, and
-  that offline data is encrypted using a key derived from the user's PIN (so losing the PIN and Supabase
-  access together means offline-only data cannot be recovered — communicate this clearly in-product).
+  once §3's encryption gap is closed, disclose the recovery implications of whatever key-derivation source
+  is chosen (communicate this clearly in-product).
 - **Data subject rights**: support in-app "export my data" (CSV/JSON of customers + transactions) and
   "delete my account" (cascades to all owned rows via RLS-respecting server action, plus local IndexedDB
   wipe) — build these before public launch, not as an afterthought.

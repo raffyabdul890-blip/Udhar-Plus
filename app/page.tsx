@@ -1,10 +1,29 @@
+import { redirect } from "next/navigation";
 import BalanceCardSkeleton from "@/components/skeletons/BalanceCardSkeleton";
 import { CustomerCardSkeletonList } from "@/components/skeletons/CustomerCardSkeleton";
+import LogoutButton from "@/components/auth/LogoutButton";
+import { createClient } from "@/lib/supabase/server";
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
   return (
     <main className="mx-auto flex max-w-md flex-col gap-6 px-4 py-8">
-      <h1 className="text-senior-2xl font-bold text-brand-white">Udhar Plus</h1>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-senior-2xl font-bold text-brand-white">Udhar Plus</h1>
+          <p className="text-senior-sm text-brand-white/80">{user.phone}</p>
+        </div>
+        <LogoutButton />
+      </div>
+
       <p className="text-senior-base text-brand-white/80">
         Boilerplate preview — brand theme, skeleton loading states.
       </p>
