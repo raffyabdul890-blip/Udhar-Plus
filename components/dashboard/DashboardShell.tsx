@@ -32,8 +32,8 @@ export default function DashboardShell({
   userId,
   phone,
   email,
-  fullName: initialFullName,
-  shopName: initialShopName,
+  fullName,
+  shopName,
   onboardingCompleted: initialOnboardingCompleted,
 }: {
   userId: string;
@@ -43,8 +43,6 @@ export default function DashboardShell({
   shopName: string | null;
   onboardingCompleted: boolean;
 }) {
-  const [fullName, setFullName] = useState(initialFullName);
-  const [shopName, setShopName] = useState(initialShopName);
   const [onboardingCompleted, setOnboardingCompleted] = useState(initialOnboardingCompleted);
   const [module, setModule] = useState<DashboardModule>("customers");
   const [search, setSearch] = useState("");
@@ -76,8 +74,8 @@ export default function DashboardShell({
   useEffect(() => {
     // Checked post-mount (not in a lazy useState initializer) to avoid a hydration
     // mismatch — the server-rendered value always matches the first client render,
-    // then this corrects it a moment later if localStorage says otherwise (e.g. a
-    // skip that was saved locally before a Supabase metadata write could land).
+    // then this corrects it a moment later if localStorage says otherwise (e.g. the
+    // terms-accepted flag saved locally before a Supabase metadata write could land).
     if (!onboardingCompleted && isOnboardingCompleteLocally(userId)) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setOnboardingCompleted(true);
@@ -223,14 +221,7 @@ export default function DashboardShell({
       )}
 
       {needsOnboarding && (
-        <OnboardingModal
-          userId={userId}
-          onComplete={({ fullName: newFullName, shopName: newShopName }) => {
-            if (newFullName) setFullName(newFullName);
-            if (newShopName) setShopName(newShopName);
-            setOnboardingCompleted(true);
-          }}
-        />
+        <OnboardingModal userId={userId} onComplete={() => setOnboardingCompleted(true)} />
       )}
     </div>
   );
