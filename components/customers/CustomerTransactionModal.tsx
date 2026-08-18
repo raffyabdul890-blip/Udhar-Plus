@@ -5,6 +5,7 @@ import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import TextField from "@/components/ui/TextField";
 import SegmentedControl from "@/components/ui/SegmentedControl";
+import WhatsAppReminderModal from "@/components/customers/WhatsAppReminderModal";
 import {
   deleteCustomerTransactionEntry,
   deleteCustomerWithHistory,
@@ -46,6 +47,7 @@ export default function CustomerTransactionModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
+  const [showReminder, setShowReminder] = useState(false);
 
   const history = [...transactions].sort((a, b) =>
     a.transaction_date < b.transaction_date ? 1 : -1
@@ -105,7 +107,7 @@ export default function CustomerTransactionModal({
 
   return (
     <Modal title={customer.name} onClose={onClose}>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-3">
         <p className="text-senior-sm text-brand-white/70">
           Current balance:{" "}
           <span
@@ -118,7 +120,16 @@ export default function CustomerTransactionModal({
             {customer.current_balance.toLocaleString("en-PK")}
           </span>
         </p>
+        <button
+          type="button"
+          onClick={() => setShowReminder(true)}
+          className="flex min-h-tap shrink-0 items-center gap-2 rounded-xl border border-brand-charcoal px-4 text-senior-sm font-bold text-brand-white transition active:scale-[0.98]"
+        >
+          💬 Send Reminder
+        </button>
+      </div>
 
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <SegmentedControl
           label="Entry type"
           value={entryType}
@@ -231,6 +242,14 @@ export default function CustomerTransactionModal({
           }
           onConfirm={handleConfirmDelete}
           onCancel={() => setPendingDelete(null)}
+        />
+      )}
+
+      {showReminder && (
+        <WhatsAppReminderModal
+          customer={customer}
+          onClose={() => setShowReminder(false)}
+          onSaved={onSaved}
         />
       )}
     </Modal>

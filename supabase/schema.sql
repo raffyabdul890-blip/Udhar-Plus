@@ -30,10 +30,16 @@ create table public.customers (
   user_id uuid not null references auth.users (id) on delete cascade,
   name text not null,
   description text,
+  -- WhatsApp/phone number for payment reminders, saved on first use.
+  phone text,
   current_balance numeric(14, 2) not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Migration note: if `customers` already existed in your database before the
+-- `phone` column above was added, run this once instead of the CREATE TABLE:
+-- alter table public.customers add column if not exists phone text;
 
 create index customers_user_id_idx on public.customers (user_id);
 

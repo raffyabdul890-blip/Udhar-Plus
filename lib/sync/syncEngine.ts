@@ -56,6 +56,7 @@ export async function syncPendingRecords(userId: string): Promise<void> {
         user_id: customer.user_id,
         name: customer.name,
         description: customer.description ?? null,
+        phone: customer.phone ?? null,
         current_balance: customer.current_balance,
         created_at: customer.created_at,
         updated_at: customer.updated_at,

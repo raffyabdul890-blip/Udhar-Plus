@@ -5,6 +5,8 @@ export interface LocalCustomer {
   user_id: string;
   name: string;
   description?: string;
+  /** WhatsApp/phone number for payment reminders — saved on first use, any common format. */
+  phone?: string;
   current_balance: number;
   created_at: string;
   updated_at: string;
