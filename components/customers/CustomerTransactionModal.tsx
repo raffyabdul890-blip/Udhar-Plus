@@ -126,18 +126,18 @@ export default function CustomerTransactionModal({
             {customer.current_balance.toLocaleString("en-PK")}
           </span>
         </p>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => setShowReminder(true)}
-            className="flex min-h-tap flex-1 items-center justify-center gap-2 rounded-xl border border-brand-charcoal px-3 text-senior-sm font-bold text-brand-white transition active:scale-[0.98]"
+            className="flex min-h-tap flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-brand-charcoal px-3 text-senior-sm font-bold text-brand-white transition active:scale-[0.98]"
           >
             💬 Send Reminder
           </button>
           <button
             type="button"
             onClick={() => window.print()}
-            className="flex min-h-tap flex-1 items-center justify-center gap-2 rounded-xl border border-brand-charcoal px-3 text-senior-sm font-bold text-brand-white transition active:scale-[0.98]"
+            className="flex min-h-tap flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-brand-charcoal px-3 text-senior-sm font-bold text-brand-white transition active:scale-[0.98]"
           >
             🖨️ Export / Print
           </button>
