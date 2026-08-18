@@ -46,11 +46,19 @@ received, and see a running balance — reliably, even offline.
 - Background sync engine (`lib/sync/syncEngine.ts`): pushes pending offline writes to Supabase on
   reconnect, and rehydrates local IndexedDB from Supabase on fresh login
 
-### Phase 2 — Core Ledger (Customers & Udhar Entries)
-- Customer CRUD (name, phone, photo optional, notes)
-- Udhar entries: give credit / record payment, running balance per customer
-- Transaction history per customer
-- Dashboard: total outstanding, total collected, top debtors
+### Phase 2 — Dual-Module Dashboard, Dual Auth & Real-Time Search (complete)
+- Dual auth on `app/login/page.tsx`: Phone Number OR Email, both via OTP-code verification
+- Dashboard shell (`components/dashboard/DashboardShell.tsx`) rendered at `app/page.tsx`: sticky
+  real-time search + Module A / Module B tab switcher
+- Module A (Retailer Khata): `CustomerList`, `AddCustomerModal`, `CustomerTransactionModal`
+  (Diye / Milay / Hisaab Baraber), running balance per customer
+- Module B (Bank & Wallet): `BankList`, `AddBankAccountModal` (Pakistani banks/wallets from
+  `lib/constants/banks.ts`), `BankTransactionModal` (Cash IN/OUT), running balance per account
+- `lib/db/ledger.ts` keeps each entity's `current_balance` in sync with every transaction write
+- Real-time search filters customers + bank accounts in-memory from local IndexedDB — no network call
+
+Still open from the original Phase 2 scope, deferred to Phase 5 (Reports) or a later pass: dashboard
+totals (outstanding / collected this month, top debtors) and per-customer transaction history view.
 
 ### Phase 3 — Offline-First Sync
 - IndexedDB local cache of customers + transactions (encrypted)
