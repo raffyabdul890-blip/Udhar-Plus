@@ -259,7 +259,7 @@ export default function LoginPage() {
             disabled={loading}
             className="min-h-tap min-w-tap rounded-xl bg-brand-red px-6 text-senior-base font-bold text-brand-white transition active:scale-[0.98] active:bg-brand-darkred disabled:bg-brand-charcoal disabled:text-brand-white/50"
           >
-            {loading ? "Sending code…" : "Send code"}
+            {loading ? (method === "phone" ? "Verifying…" : "Sending code…") : "Send code"}
           </button>
         </form>
       ) : (
