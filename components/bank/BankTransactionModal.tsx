@@ -10,7 +10,11 @@ import {
   deleteBankTransactionEntry,
   recordBankTransaction,
 } from "@/lib/db/ledger";
-import { fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/utils/datetime";
+import {
+  compareTransactionDates,
+  fromDatetimeLocalValue,
+  toDatetimeLocalValue,
+} from "@/lib/utils/datetime";
 import type { LocalBankAccount, LocalTransaction } from "@/lib/db/offlineStorage";
 
 type PendingDelete = { kind: "transaction"; transaction: LocalTransaction } | { kind: "account" };
@@ -45,9 +49,7 @@ export default function BankTransactionModal({
   const [error, setError] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
 
-  const history = [...transactions].sort((a, b) =>
-    a.transaction_date < b.transaction_date ? 1 : -1
-  );
+  const history = [...transactions].sort((a, b) => compareTransactionDates(b, a));
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();

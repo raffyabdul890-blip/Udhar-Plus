@@ -182,6 +182,7 @@ export default function DashboardShell({
       {modal.kind === "customer-txn" && openCustomer && (
         <CustomerTransactionModal
           customer={openCustomer}
+          shopLabel={primaryLabel}
           transactions={transactions.filter(
             (t) => t.entity_type === "customer" && t.entity_id === openCustomer.id
           )}

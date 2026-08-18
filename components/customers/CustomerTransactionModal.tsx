@@ -6,13 +6,18 @@ import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import TextField from "@/components/ui/TextField";
 import SegmentedControl from "@/components/ui/SegmentedControl";
 import WhatsAppReminderModal from "@/components/customers/WhatsAppReminderModal";
+import PrintableLedger from "@/components/customers/PrintableLedger";
 import {
   deleteCustomerTransactionEntry,
   deleteCustomerWithHistory,
   recordCustomerTransaction,
   settleCustomerBalance,
 } from "@/lib/db/ledger";
-import { fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/utils/datetime";
+import {
+  compareTransactionDates,
+  fromDatetimeLocalValue,
+  toDatetimeLocalValue,
+} from "@/lib/utils/datetime";
 import type { LocalCustomer, LocalTransaction } from "@/lib/db/offlineStorage";
 
 type EntryType = "DIYE" | "MILAY" | "SETTLE";
@@ -29,12 +34,14 @@ function formatDateTime(iso: string) {
 
 export default function CustomerTransactionModal({
   customer,
+  shopLabel,
   transactions,
   onClose,
   onSaved,
   onDeleted,
 }: {
   customer: LocalCustomer;
+  shopLabel: string;
   transactions: LocalTransaction[];
   onClose: () => void;
   onSaved: () => void;
@@ -49,9 +56,7 @@ export default function CustomerTransactionModal({
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const [showReminder, setShowReminder] = useState(false);
 
-  const history = [...transactions].sort((a, b) =>
-    a.transaction_date < b.transaction_date ? 1 : -1
-  );
+  const history = [...transactions].sort((a, b) => compareTransactionDates(b, a));
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -106,8 +111,9 @@ export default function CustomerTransactionModal({
   }
 
   return (
+    <>
     <Modal title={customer.name} onClose={onClose}>
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3">
         <p className="text-senior-sm text-brand-white/70">
           Current balance:{" "}
           <span
@@ -120,13 +126,22 @@ export default function CustomerTransactionModal({
             {customer.current_balance.toLocaleString("en-PK")}
           </span>
         </p>
-        <button
-          type="button"
-          onClick={() => setShowReminder(true)}
-          className="flex min-h-tap shrink-0 items-center gap-2 rounded-xl border border-brand-charcoal px-4 text-senior-sm font-bold text-brand-white transition active:scale-[0.98]"
-        >
-          💬 Send Reminder
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setShowReminder(true)}
+            className="flex min-h-tap flex-1 items-center justify-center gap-2 rounded-xl border border-brand-charcoal px-3 text-senior-sm font-bold text-brand-white transition active:scale-[0.98]"
+          >
+            💬 Send Reminder
+          </button>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="flex min-h-tap flex-1 items-center justify-center gap-2 rounded-xl border border-brand-charcoal px-3 text-senior-sm font-bold text-brand-white transition active:scale-[0.98]"
+          >
+            🖨️ Export / Print
+          </button>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -253,5 +268,7 @@ export default function CustomerTransactionModal({
         />
       )}
     </Modal>
+    <PrintableLedger customer={customer} transactions={transactions} shopLabel={shopLabel} />
+    </>
   );
 }
