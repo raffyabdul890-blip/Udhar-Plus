@@ -33,7 +33,17 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isPublicRoute = PUBLIC_ROUTES.includes(request.nextUrl.pathname);
+  const { pathname } = request.nextUrl;
+
+  // Route Handlers authorize themselves per Next.js's own guidance — proxy only
+  // gates pages. Without this, an unauthenticated POST to a route like
+  // /api/auth/firebase-phone (which exists precisely to establish that first
+  // session) would get redirected to /login before the handler ever ran.
+  if (pathname.startsWith("/api/")) {
+    return response;
+  }
+
+  const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
 
   if (!user && !isPublicRoute) {
     return NextResponse.redirect(new URL("/login", request.url));
