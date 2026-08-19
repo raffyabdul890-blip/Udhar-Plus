@@ -117,10 +117,18 @@ create table public.transactions (
   type text not null check (type in ('IN', 'OUT')),
   amount numeric(14, 2) not null check (amount > 0),
   note text,
+  -- Itemized sale breakdown (customer entries only): [{ id, name, quantity, unit, pricePerUnit }].
+  -- Photo attachments are local-only (IndexedDB) and never synced here — no
+  -- Supabase Storage bucket configured yet.
+  items jsonb,
   transaction_date timestamptz not null default now(),
   created_at timestamptz not null default now(),
   synced boolean not null default true
 );
+
+-- Migration note: if `transactions` already existed before the `items` column
+-- above was added, run this once instead of the CREATE TABLE:
+-- alter table public.transactions add column if not exists items jsonb;
 
 create index transactions_user_id_idx on public.transactions (user_id);
 create index transactions_entity_idx on public.transactions (entity_type, entity_id);

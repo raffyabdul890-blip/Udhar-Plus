@@ -88,6 +88,9 @@ export async function syncPendingRecords(userId: string): Promise<void> {
         type: txn.type,
         amount: txn.amount,
         note: txn.note ?? null,
+        items: txn.items ?? null,
+        // photo_id is deliberately omitted — photos are local-only (no Supabase
+        // Storage configured), so a synced reference would be dangling on other devices.
         transaction_date: txn.transaction_date,
         created_at: txn.created_at,
         synced: true,

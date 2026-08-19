@@ -26,6 +26,14 @@ export interface LocalBankAccount {
   synced: boolean;
 }
 
+export interface LineItem {
+  id: string;
+  name: string;
+  quantity: number;
+  unit?: string;
+  pricePerUnit: number;
+}
+
 export interface LocalTransaction {
   id: string;
   user_id: string;
@@ -34,9 +42,21 @@ export interface LocalTransaction {
   type: "IN" | "OUT";
   amount: number;
   note?: string;
+  /** Itemized breakdown, customer entries only. Synced as jsonb — see supabase/schema.sql. */
+  items?: LineItem[];
+  /** References `photos.id` — local-only, never synced (no Supabase Storage configured yet). */
+  photo_id?: string;
   transaction_date: string;
   created_at: string;
   synced: boolean;
+}
+
+/** A photo attached to a transaction (e.g. a receipt). Local-only — see `photo_id` above. */
+export interface LocalPhoto {
+  id: string;
+  user_id: string;
+  blob: Blob;
+  created_at: string;
 }
 
 export type LocalEntityTable = "customers" | "bankAccounts" | "transactions";
@@ -53,6 +73,7 @@ class UdharPlusDB extends Dexie {
   bankAccounts!: Table<LocalBankAccount, string>;
   transactions!: Table<LocalTransaction, string>;
   pendingDeletes!: Table<PendingDelete, string>;
+  photos!: Table<LocalPhoto, string>;
 
   constructor() {
     super("UdharPlusDB");
@@ -63,6 +84,13 @@ class UdharPlusDB extends Dexie {
       bankAccounts: "id, user_id, updated_at",
       transactions: "id, user_id, [entity_type+entity_id]",
       pendingDeletes: "id, table, user_id",
+    });
+    this.version(2).stores({
+      customers: "id, user_id, updated_at",
+      bankAccounts: "id, user_id, updated_at",
+      transactions: "id, user_id, [entity_type+entity_id]",
+      pendingDeletes: "id, table, user_id",
+      photos: "id, user_id",
     });
   }
 }
@@ -250,6 +278,24 @@ export async function getAllTransactions(userId: string): Promise<LocalTransacti
 }
 
 // ---------------------------------------------------------------------------
+// Photos (local-only attachments — see LocalTransaction.photo_id)
+// ---------------------------------------------------------------------------
+
+export async function savePhoto(userId: string, blob: Blob): Promise<string> {
+  const id = crypto.randomUUID();
+  await requireDb().photos.put({ id, user_id: userId, blob, created_at: nowIso() });
+  return id;
+}
+
+export async function getPhoto(id: string): Promise<LocalPhoto | undefined> {
+  return requireDb().photos.get(id);
+}
+
+export async function deletePhoto(id: string): Promise<void> {
+  await requireDb().photos.delete(id);
+}
+
+// ---------------------------------------------------------------------------
 // Sync helpers (consumed by lib/sync/syncEngine.ts)
 // ---------------------------------------------------------------------------
 
@@ -310,12 +356,14 @@ export async function wipeLocalDatabase(): Promise<void> {
     requireDb().bankAccounts,
     requireDb().transactions,
     requireDb().pendingDeletes,
+    requireDb().photos,
     async () => {
       await Promise.all([
         requireDb().customers.clear(),
         requireDb().bankAccounts.clear(),
         requireDb().transactions.clear(),
         requireDb().pendingDeletes.clear(),
+        requireDb().photos.clear(),
       ]);
     }
   );

@@ -5,10 +5,18 @@ import {
   deleteTransaction,
   updateBankAccount,
   updateCustomer,
+  updateTransaction,
+  type LineItem,
   type LocalBankAccount,
   type LocalCustomer,
   type LocalTransaction,
 } from "./offlineStorage";
+
+export interface CustomerEntryFields {
+  note?: string;
+  items?: LineItem[];
+  photoId?: string;
+}
 
 /**
  * Customer khata balance convention: current_balance is what the customer owes
@@ -19,8 +27,8 @@ export async function recordCustomerTransaction(
   customer: LocalCustomer,
   type: "IN" | "OUT",
   amount: number,
-  note: string | undefined,
-  transactionDate: string
+  transactionDate: string,
+  fields: CustomerEntryFields = {}
 ): Promise<void> {
   const delta = type === "OUT" ? amount : -amount;
 
@@ -30,12 +38,43 @@ export async function recordCustomerTransaction(
     entity_id: customer.id,
     type,
     amount,
-    note,
+    note: fields.note,
+    items: fields.items,
+    photo_id: fields.photoId,
     transaction_date: transactionDate,
   });
 
   await updateCustomer(customer.id, {
     current_balance: customer.current_balance + delta,
+  });
+}
+
+/**
+ * Overwrites an existing customer entry in place and reconciles the running
+ * balance: reverses the original entry's effect, then applies the new one.
+ */
+export async function updateCustomerTransactionEntry(
+  customer: LocalCustomer,
+  original: LocalTransaction,
+  type: "IN" | "OUT",
+  amount: number,
+  transactionDate: string,
+  fields: CustomerEntryFields = {}
+): Promise<void> {
+  const reverseOriginal = original.type === "OUT" ? -original.amount : original.amount;
+  const applyNew = type === "OUT" ? amount : -amount;
+
+  await updateTransaction(original.id, {
+    type,
+    amount,
+    note: fields.note,
+    items: fields.items,
+    photo_id: fields.photoId,
+    transaction_date: transactionDate,
+  });
+
+  await updateCustomer(customer.id, {
+    current_balance: customer.current_balance + reverseOriginal + applyNew,
   });
 }
 
@@ -49,7 +88,9 @@ export async function settleCustomerBalance(
   const type = customer.current_balance > 0 ? "IN" : "OUT";
   const amount = Math.abs(customer.current_balance);
 
-  await recordCustomerTransaction(customer, type, amount, "Hisaab Baraber", transactionDate);
+  await recordCustomerTransaction(customer, type, amount, transactionDate, {
+    note: "Hisaab Baraber",
+  });
 }
 
 /** Bank/wallet cash flow: IN increases the account balance, OUT decreases it. */

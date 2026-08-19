@@ -5,6 +5,9 @@ import Modal from "@/components/ui/Modal";
 import TextField from "@/components/ui/TextField";
 import { addCustomer } from "@/lib/db/offlineStorage";
 
+const contactsPickerAvailable =
+  typeof navigator !== "undefined" && typeof navigator.contacts?.select === "function";
+
 export default function AddCustomerModal({
   userId,
   onClose,
@@ -15,9 +18,21 @@ export default function AddCustomerModal({
   onAdded: () => void;
 }) {
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function handlePickContact() {
+    if (!navigator.contacts?.select) return;
+    try {
+      const [contact] = await navigator.contacts.select(["name", "tel"], { multiple: false });
+      if (contact?.name?.[0]) setName(contact.name[0]);
+      if (contact?.tel?.[0]) setPhone(contact.tel[0]);
+    } catch {
+      // User cancelled the picker or denied permission — manual entry still works.
+    }
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -32,6 +47,7 @@ export default function AddCustomerModal({
     await addCustomer({
       user_id: userId,
       name: name.trim(),
+      phone: phone.trim() || undefined,
       description: description.trim() || undefined,
       current_balance: 0,
     });
@@ -43,6 +59,16 @@ export default function AddCustomerModal({
   return (
     <Modal title="Add Customer" onClose={onClose}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        {contactsPickerAvailable && (
+          <button
+            type="button"
+            onClick={handlePickContact}
+            className="flex min-h-tap items-center justify-center gap-2 rounded-xl border border-brand-charcoal px-4 text-senior-sm font-bold text-brand-white transition active:scale-[0.98]"
+          >
+            📇 Pick from Contacts
+          </button>
+        )}
+
         <TextField
           id="customer-name"
           label="Customer name"
@@ -50,6 +76,15 @@ export default function AddCustomerModal({
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Ahmed General Store"
           autoFocus
+        />
+        <TextField
+          id="customer-phone"
+          label="Phone / WhatsApp (optional)"
+          type="tel"
+          inputMode="numeric"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="03001234567"
         />
         <TextField
           id="customer-description"
