@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Modal from "@/components/ui/Modal";
+import Button from "@/components/ui/Button";
 import WhatsAppReminderModal from "@/components/customers/WhatsAppReminderModal";
 import { buildLedgerRows, formatLedgerDate } from "@/lib/ledgerRows";
 import { downloadCanvasAsPng, renderBillCanvas } from "@/lib/canvasBill";
@@ -64,27 +65,18 @@ export default function ExportSummaryModal({
   return (
     <Modal title={`Share / Export — ${customer.name}`} onClose={onClose}>
       <div className="flex flex-col gap-3">
-        <button
-          type="button"
-          onClick={() => setShowWhatsApp(true)}
-          disabled={!canShareWhatsApp}
-          className="min-h-tap rounded-xl bg-brand-red px-6 text-senior-base font-bold text-brand-white transition active:scale-[0.98] active:bg-brand-darkred disabled:bg-brand-charcoal disabled:text-brand-white/50"
-        >
-          💬 Share via WhatsApp
-        </button>
+        <Button icon="whatsapp" fullWidth onClick={() => setShowWhatsApp(true)} disabled={!canShareWhatsApp}>
+          Share via WhatsApp
+        </Button>
         {!canShareWhatsApp && (
-          <p className="text-senior-xs text-brand-white/60">
-            Add a phone number via &ldquo;Send Reminder&rdquo; first to enable WhatsApp sharing.
+          <p className="text-senior-xs text-ink-secondary">
+            Add a phone number via &ldquo;Remind&rdquo; first to enable WhatsApp sharing.
           </p>
         )}
 
-        <button
-          type="button"
-          onClick={handleDownloadBill}
-          className="min-h-tap rounded-xl border border-brand-charcoal px-6 text-senior-base font-bold text-brand-white transition active:scale-[0.98]"
-        >
-          ⬇️ Download Bill
-        </button>
+        <Button variant="secondary" icon="download" fullWidth onClick={handleDownloadBill}>
+          Download Bill
+        </Button>
       </div>
     </Modal>
   );

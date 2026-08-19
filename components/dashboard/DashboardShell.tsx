@@ -3,14 +3,19 @@
 import { useEffect, useState } from "react";
 import OnboardingModal from "@/components/auth/OnboardingModal";
 import TopNavbar from "@/components/dashboard/TopNavbar";
-import BottomNav, { type BottomTabId } from "@/components/dashboard/BottomNav";
+import BottomNav, { NAV_ITEMS, type BottomTabId } from "@/components/dashboard/BottomNav";
 import DesktopSidebar from "@/components/dashboard/DesktopSidebar";
+import DashboardHome from "@/components/dashboard/DashboardHome";
 import KhataTab from "@/components/dashboard/KhataTab";
 import CashbookTab from "@/components/cashbook/CashbookTab";
+import SalesTab from "@/components/sales/SalesTab";
 import ItemsTab from "@/components/items/ItemsTab";
 import ReportsTab from "@/components/reports/ReportsTab";
+import BankWalletTab from "@/components/bank/BankWalletTab";
 import MoreTab from "@/components/settings/MoreTab";
 import { isOnboardingCompleteLocally } from "@/lib/onboarding";
+
+export type QuickActionId = "give" | "receive" | "expense" | "sale";
 
 export default function DashboardShell({
   userId,
@@ -24,7 +29,8 @@ export default function DashboardShell({
   onboardingCompleted: boolean;
 }) {
   const [onboardingCompleted, setOnboardingCompleted] = useState(initialOnboardingCompleted);
-  const [activeTab, setActiveTab] = useState<BottomTabId>("khata");
+  const [activeTab, setActiveTab] = useState<BottomTabId>("dashboard");
+  const [pendingAction, setPendingAction] = useState<QuickActionId | null>(null);
 
   useEffect(() => {
     // Checked post-mount (not in a lazy useState initializer) to avoid a hydration
@@ -39,25 +45,58 @@ export default function DashboardShell({
 
   const needsOnboarding = !onboardingCompleted;
   const primaryLabel = shopName ?? fullName ?? "Udhar Plus";
+  const sectionTitle = NAV_ITEMS.find((t) => t.id === activeTab)?.label ?? "Udhar Plus";
+
+  function handleQuickAction(action: QuickActionId) {
+    setActiveTab(action === "expense" ? "cashbook" : "khata");
+    setPendingAction(action);
+  }
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col lg:max-w-5xl lg:flex-row">
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col lg:max-w-6xl lg:flex-row">
       <DesktopSidebar active={activeTab} onChange={setActiveTab} primaryLabel={primaryLabel} />
 
       <div className="flex min-h-screen flex-1 flex-col lg:min-h-0">
         <div
-          className="sticky top-0 z-10 bg-brand-black px-4 pb-3 lg:static"
+          className="sticky top-0 z-10 bg-canvas/95 px-4 pb-3 backdrop-blur lg:static lg:bg-transparent lg:pt-6"
           style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}
         >
-          <TopNavbar primaryLabel={primaryLabel} />
+          <TopNavbar primaryLabel={primaryLabel} sectionTitle={sectionTitle} />
         </div>
 
         <div className="flex-1 px-4 pb-[calc(6rem_+_env(safe-area-inset-bottom))] lg:pb-8">
-          {activeTab === "khata" && <KhataTab userId={userId} shopLabel={primaryLabel} />}
-          {activeTab === "cashbook" && <CashbookTab userId={userId} />}
+          {activeTab === "dashboard" && (
+            <DashboardHome
+              userId={userId}
+              shopLabel={primaryLabel}
+              onQuickAction={handleQuickAction}
+              onNavigateToTab={setActiveTab}
+            />
+          )}
+          {activeTab === "khata" && (
+            <KhataTab
+              userId={userId}
+              shopLabel={primaryLabel}
+              pendingAction={
+                pendingAction === "give" || pendingAction === "receive" || pendingAction === "sale"
+                  ? pendingAction
+                  : null
+              }
+              onPendingActionHandled={() => setPendingAction(null)}
+            />
+          )}
+          {activeTab === "cashbook" && (
+            <CashbookTab
+              userId={userId}
+              pendingExpense={pendingAction === "expense"}
+              onPendingActionHandled={() => setPendingAction(null)}
+            />
+          )}
+          {activeTab === "sales" && <SalesTab userId={userId} shopLabel={primaryLabel} />}
           {activeTab === "items" && <ItemsTab userId={userId} />}
           {activeTab === "reports" && <ReportsTab userId={userId} shopLabel={primaryLabel} />}
-          {activeTab === "more" && <MoreTab userId={userId} />}
+          {activeTab === "bank" && <BankWalletTab userId={userId} />}
+          {activeTab === "more" && <MoreTab userId={userId} onNavigateToTab={setActiveTab} />}
         </div>
       </div>
 

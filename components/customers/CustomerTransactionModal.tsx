@@ -5,6 +5,11 @@ import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import TextField from "@/components/ui/TextField";
 import SegmentedControl from "@/components/ui/SegmentedControl";
+import Button from "@/components/ui/Button";
+import Amount from "@/components/ui/Amount";
+import AvatarInitial from "@/components/ui/AvatarInitial";
+import Icon from "@/components/icons/Icon";
+import { useToast } from "@/components/ui/ToastProvider";
 import WhatsAppReminderModal from "@/components/customers/WhatsAppReminderModal";
 import ExportSummaryModal from "@/components/customers/ExportSummaryModal";
 import ItemizedEntryFields, {
@@ -28,6 +33,7 @@ import { buildLedgerRows } from "@/lib/ledgerRows";
 import { downloadCanvasAsPng, renderBillCanvas } from "@/lib/canvasBill";
 import { buildItemizedReceiptMessage } from "@/lib/whatsapp";
 import { getFinancialInstitution } from "@/lib/constants/banks";
+import { selectClassName } from "@/components/ui/TextField";
 import {
   getBankAccounts,
   getItems,
@@ -41,6 +47,7 @@ import {
 } from "@/lib/db/offlineStorage";
 
 export type EntryType = "DIYE" | "MILAY" | "SETTLE";
+type Stage = "choose" | "form";
 type PendingDelete = { kind: "transaction"; transaction: LocalTransaction } | { kind: "customer" };
 type PhotoState = { kind: "none" } | { kind: "new"; file: File } | { kind: "existing"; id: string };
 type ReceiptState = {
@@ -63,18 +70,24 @@ export default function CustomerTransactionModal({
   customer,
   shopLabel,
   initialEntryType,
+  initialShowItems,
   onClose,
   onSaved,
   onDeleted,
 }: {
   customer: LocalCustomer;
   shopLabel: string;
-  /** Pre-selects Give Udhaar / Receive Payment when opened from a quick-action shortcut. Defaults to Diye. */
+  /** Pre-selects Give Udhaar / Receive Payment when opened from a quick-action shortcut — also skips straight to the dedicated entry form, hiding the customer-detail chrome. */
   initialEntryType?: EntryType;
+  /** Pre-opens the items panel — used by the "+ Sale" quick action. */
+  initialShowItems?: boolean;
   onClose: () => void;
   onSaved: () => void;
   onDeleted: () => void;
 }) {
+  const showToast = useToast();
+  const isQuickAction = Boolean(initialEntryType);
+  const [stage, setStage] = useState<Stage>(isQuickAction ? "form" : "choose");
   const [history, setHistory] = useState<LocalTransaction[]>([]);
   const [catalogItems, setCatalogItems] = useState<LocalItem[]>([]);
   const [bankAccounts, setBankAccounts] = useState<LocalBankAccount[]>([]);
@@ -85,7 +98,7 @@ export default function CustomerTransactionModal({
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank" | "wallet">("cash");
   const [paymentAccountId, setPaymentAccountId] = useState("");
   const [dateValue, setDateValue] = useState(() => toDatetimeLocalValue(new Date()));
-  const [showItems, setShowItems] = useState(false);
+  const [showItems, setShowItems] = useState(Boolean(initialShowItems));
   const [items, setItems] = useState<LineItem[]>([]);
   const [photoState, setPhotoState] = useState<PhotoState>({ kind: "none" });
   const [saving, setSaving] = useState(false);
@@ -128,16 +141,17 @@ export default function CustomerTransactionModal({
 
   function resetForm() {
     setEditingTransaction(null);
-    setEntryType("DIYE");
+    setEntryType(initialEntryType ?? "DIYE");
     setAmount("");
     setNote("");
     setDateValue(toDatetimeLocalValue(new Date()));
-    setShowItems(false);
+    setShowItems(Boolean(initialShowItems));
     setItems([]);
     setPhotoState({ kind: "none" });
     setPaymentMethod("cash");
     setPaymentAccountId("");
     setError(null);
+    if (!isQuickAction) setStage("choose");
   }
 
   function startEdit(txn: LocalTransaction) {
@@ -152,6 +166,7 @@ export default function CustomerTransactionModal({
     setPaymentMethod(txn.payment_method ?? "cash");
     setPaymentAccountId(txn.payment_account_id ?? "");
     setError(null);
+    setStage("form");
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -167,6 +182,7 @@ export default function CustomerTransactionModal({
       setSaving(true);
       await settleCustomerBalance(customer, transactionDate);
       setSaving(false);
+      showToast("Balance settled");
       onSaved();
       resetForm();
       await reloadHistory();
@@ -207,6 +223,7 @@ export default function CustomerTransactionModal({
     };
     const type = entryType === "DIYE" ? ("OUT" as const) : ("IN" as const);
     const wasNewItemizedEntry = !editingTransaction && items.length > 0;
+    const wasEditing = Boolean(editingTransaction);
 
     if (editingTransaction) {
       await updateCustomerTransactionEntry(
@@ -233,6 +250,7 @@ export default function CustomerTransactionModal({
       return;
     }
 
+    showToast(wasEditing ? "Entry updated" : entryType === "DIYE" ? "Udhaar saved" : "Payment received");
     resetForm();
     onClose();
   }
@@ -287,12 +305,9 @@ export default function CustomerTransactionModal({
         }}
       >
         <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1 rounded-xl border border-brand-charcoal bg-brand-black/40 p-4">
+          <div className="flex flex-col gap-1 rounded-xl border border-border bg-surface-alt p-4">
             {receipt.items.map((item) => (
-              <div
-                key={item.id}
-                className="flex justify-between gap-3 text-senior-sm text-brand-white/90"
-              >
+              <div key={item.id} className="flex justify-between gap-3 text-senior-sm text-ink">
                 <span className="truncate">
                   {item.name || "Item"} x{item.quantity}
                   {item.unit ? ` ${item.unit}` : ""}
@@ -302,44 +317,41 @@ export default function CustomerTransactionModal({
                 </span>
               </div>
             ))}
-            <div className="mt-2 flex justify-between border-t border-brand-white/10 pt-2 text-senior-base font-bold text-brand-white">
+            <div className="mt-2 flex justify-between border-t border-border pt-2 text-senior-base font-bold text-ink">
               <span>Total</span>
               <span>{receipt.total.toLocaleString("en-PK")}</span>
             </div>
           </div>
 
-          <button
-            type="button"
+          <Button
+            variant="success"
+            icon="whatsapp"
+            fullWidth
             onClick={() => setShowReceiptWhatsApp(true)}
             disabled={!customer.phone}
-            className="min-h-tap rounded-xl bg-brand-red px-6 text-senior-base font-bold text-brand-white transition active:scale-[0.98] active:bg-brand-darkred disabled:bg-brand-charcoal disabled:text-brand-white/50"
           >
-            💬 Share via WhatsApp
-          </button>
+            Share via WhatsApp
+          </Button>
           {!customer.phone && (
-            <p className="text-senior-xs text-brand-white/60">
+            <p className="text-senior-xs text-ink-secondary">
               Add a phone number to share this bill on WhatsApp.
             </p>
           )}
 
-          <button
-            type="button"
-            onClick={handleDownloadReceiptBill}
-            className="min-h-tap rounded-xl border border-brand-charcoal px-6 text-senior-base font-bold text-brand-white transition active:scale-[0.98]"
-          >
-            ⬇️ Download Bill
-          </button>
+          <Button variant="secondary" icon="download" fullWidth onClick={handleDownloadReceiptBill}>
+            Download Bill
+          </Button>
 
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            fullWidth
             onClick={() => {
               setReceipt(null);
               onClose();
             }}
-            className="min-h-tap text-senior-sm font-medium text-brand-white/80 underline"
           >
             Done
-          </button>
+          </Button>
         </div>
 
         {showReceiptWhatsApp && (
@@ -364,259 +376,319 @@ export default function CustomerTransactionModal({
     );
   }
 
+  const bannerClasses =
+    entryType === "MILAY"
+      ? "bg-success text-white"
+      : entryType === "SETTLE"
+        ? "bg-primary text-white"
+        : "bg-warning text-white";
+  const bannerLabel =
+    entryType === "MILAY" ? "Receive Payment from" : entryType === "SETTLE" ? "Settle Balance with" : "Give Udhaar to";
+  const canGoBack = !isQuickAction && !editingTransaction;
+
   return (
-    <Modal title={customer.name} onClose={onClose}>
-      <div className="flex flex-col gap-3">
-        <p className="text-senior-sm text-brand-white/70">
-          Current balance:{" "}
-          <span
-            className={
-              customer.current_balance !== 0
-                ? "font-bold text-brand-red"
-                : "font-bold text-brand-white"
-            }
-          >
-            {customer.current_balance.toLocaleString("en-PK")}
-          </span>
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setShowReminder(true)}
-            className="flex min-h-tap flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-brand-charcoal px-3 text-senior-sm font-bold text-brand-white transition active:scale-[0.98]"
-          >
-            💬 Remind on WhatsApp
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowExportSummary(true)}
-            className="flex min-h-tap flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-brand-charcoal px-3 text-senior-sm font-bold text-brand-white transition active:scale-[0.98]"
-          >
-            📄 Share / Export Summary
-          </button>
-        </div>
-      </div>
+    <Modal title={customer.name} onClose={onClose} hideTitle>
+      {stage === "choose" ? (
+        <div className="flex animate-fade-in-up flex-col gap-5">
+          <div className="flex items-center gap-3">
+            <AvatarInitial name={customer.name} size="lg" />
+            <div className="flex-1 overflow-hidden">
+              <p className="truncate text-senior-lg font-bold text-ink">{customer.name}</p>
+              {customer.phone && (
+                <p className="truncate text-senior-sm text-ink-secondary">{customer.phone}</p>
+              )}
+            </div>
+          </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <SegmentedControl
-          label="Entry type"
-          value={entryType}
-          onChange={setEntryType}
-          options={
-            editingTransaction
-              ? [
-                  { value: "DIYE", label: "Diye" },
-                  { value: "MILAY", label: "Milay" },
-                ]
-              : [
-                  { value: "DIYE", label: "Diye" },
-                  { value: "MILAY", label: "Milay" },
-                  { value: "SETTLE", label: "Hisaab Baraber" },
-                ]
-          }
-        />
-
-        {entryType !== "SETTLE" && (
-          <>
-            <TextField
-              id="txn-amount"
-              label="Amount"
-              type="number"
-              inputMode="decimal"
-              min="0"
-              step="0.01"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0"
-              autoFocus
+          <div className="rounded-2xl border border-border bg-surface-alt p-5 text-center">
+            <p className="text-senior-sm font-medium text-ink-secondary">
+              {customer.current_balance > 0
+                ? "You Will Receive"
+                : customer.current_balance < 0
+                  ? "You Will Pay"
+                  : "Settled"}
+            </p>
+            <Amount
+              value={Math.abs(customer.current_balance)}
+              className={`text-senior-3xl font-bold ${
+                customer.current_balance > 0
+                  ? "text-danger"
+                  : customer.current_balance < 0
+                    ? "text-success-dark"
+                    : "text-ink"
+              }`}
             />
+          </div>
 
-            {showItems ? (
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-senior-base font-medium text-brand-white">Items</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowItems(false);
-                      setItems([]);
-                    }}
-                    className="text-senior-xs font-medium text-brand-white/60 underline"
-                  >
-                    Remove items
-                  </button>
-                </div>
-                <ItemizedEntryFields
-                  items={items}
-                  catalogItems={catalogItems}
-                  onChange={handleItemsChange}
-                />
-              </div>
-            ) : (
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" icon="whatsapp" className="flex-1" onClick={() => setShowReminder(true)}>
+              Remind
+            </Button>
+            <Button variant="ghost" size="sm" icon="file-text" className="flex-1" onClick={() => setShowExportSummary(true)}>
+              Export
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              variant="warning"
+              icon="khata"
+              onClick={() => {
+                setEntryType("DIYE");
+                setStage("form");
+              }}
+            >
+              Give Udhaar
+            </Button>
+            <Button
+              variant="success"
+              icon="cash-in"
+              onClick={() => {
+                setEntryType("MILAY");
+                setStage("form");
+              }}
+            >
+              Receive Payment
+            </Button>
+          </div>
+
+          {customer.current_balance !== 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setEntryType("SETTLE");
+                setStage("form");
+              }}
+              className="text-center text-senior-sm font-bold text-primary underline underline-offset-2"
+            >
+              Settle full balance
+            </button>
+          )}
+
+          {sortedHistory.length > 0 && (
+            <div className="flex flex-col gap-2 border-t border-border pt-4">
+              <h3 className="text-senior-sm font-bold text-ink-secondary">Recent entries</h3>
+              <ul className="flex max-h-64 flex-col gap-2 overflow-y-auto">
+                {sortedHistory.map((txn) => (
+                  <li key={txn.id} className="flex items-center gap-3 rounded-xl bg-surface-alt px-3 py-2">
+                    {txn.photo_id && <EntryPhotoThumbnail photoId={txn.photo_id} />}
+                    <div className="flex flex-1 flex-col overflow-hidden">
+                      <span
+                        className={`truncate text-senior-sm font-bold ${
+                          txn.type === "OUT" ? "text-danger" : "text-success-dark"
+                        }`}
+                      >
+                        {txn.type === "OUT" ? "Udhaar (Diye)" : "Jama (Milay)"} ·{" "}
+                        {txn.amount.toLocaleString("en-PK")}
+                      </span>
+                      <span className="truncate text-senior-xs text-ink-secondary">
+                        {formatDateTime(txn.transaction_date)}
+                        {txn.note ? ` · ${txn.note}` : ""}
+                      </span>
+                      {txn.items && txn.items.length > 0 && (
+                        <span className="truncate text-senior-xs text-ink-tertiary">
+                          {txn.items.length} item{txn.items.length > 1 ? "s" : ""}:{" "}
+                          {txn.items.map((item) => item.name || "—").join(", ")}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => startEdit(txn)}
+                      aria-label="Edit entry"
+                      className="flex min-h-tap min-w-tap shrink-0 items-center justify-center rounded-xl text-ink-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    >
+                      <Icon name="edit" size={18} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPendingDelete({ kind: "transaction", transaction: txn })}
+                      aria-label="Delete entry"
+                      className="flex min-h-tap min-w-tap shrink-0 items-center justify-center rounded-xl text-ink-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    >
+                      <Icon name="trash" size={18} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <Button variant="danger" size="sm" onClick={() => setPendingDelete({ kind: "customer" })}>
+            Delete customer
+          </Button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="flex animate-fade-in-up flex-col gap-4">
+          <div className={`-m-6 mb-0 flex flex-col gap-1 rounded-t-2xl px-6 pb-5 pt-6 ${bannerClasses}`}>
+            {canGoBack && (
               <button
                 type="button"
-                onClick={() => setShowItems(true)}
-                className="min-h-tap rounded-xl border border-brand-charcoal px-4 text-senior-sm font-bold text-brand-white transition active:scale-[0.98]"
+                onClick={resetForm}
+                className="mb-1 flex items-center gap-1 self-start text-senior-sm font-bold opacity-90"
               >
-                🧾 Add Items
+                <Icon name="chevron-left" size={18} />
+                Back
               </button>
             )}
-          </>
-        )}
+            <p className="text-senior-sm font-medium opacity-85">{bannerLabel}</p>
+            <p className="truncate text-senior-xl font-bold">{customer.name}</p>
+          </div>
 
-        {entryType === "MILAY" && (
-          <div className="flex flex-col gap-2">
+          {editingTransaction && (
             <SegmentedControl
-              label="Payment method"
-              value={paymentMethod}
-              onChange={(value) => {
-                setPaymentMethod(value);
-                setPaymentAccountId("");
-              }}
+              label="Entry type"
+              value={entryType}
+              onChange={setEntryType}
               options={[
-                { value: "cash", label: "Cash" },
-                { value: "bank", label: "Bank" },
-                { value: "wallet", label: "Wallet" },
+                { value: "DIYE", label: "Udhaar (Give)" },
+                { value: "MILAY", label: "Payment (Receive)" },
               ]}
             />
-            {paymentMethod !== "cash" && (
-              accountOptions.length > 0 ? (
-                <select
-                  aria-label={`Choose ${paymentMethod} account`}
-                  value={paymentAccountId}
-                  onChange={(e) => setPaymentAccountId(e.target.value)}
-                  className="min-h-tap rounded-xl border border-brand-charcoal bg-brand-black px-4 text-senior-base text-brand-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
-                >
-                  <option value="">— Choose account —</option>
-                  {accountOptions.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.account_title} ({a.bank_name})
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <p className="text-senior-xs text-brand-white/50">
-                  No {paymentMethod} account yet — add one in Bank &amp; Wallet first.
-                </p>
-              )
-            )}
-          </div>
-        )}
+          )}
 
-        <TextField
-          id="txn-date"
-          label="Date & time"
-          type="datetime-local"
-          value={dateValue}
-          onChange={(e) => setDateValue(e.target.value)}
-        />
-
-        {entryType !== "SETTLE" && (
-          <>
-            <TextField
-              id="txn-note"
-              label="Note (optional)"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="e.g. 2 bags of flour"
-            />
-
-            <PhotoAttachment
-              file={photoState.kind === "new" ? photoState.file : null}
-              existingPhotoId={photoState.kind === "existing" ? photoState.id : undefined}
-              onFileSelected={(file) => setPhotoState({ kind: "new", file })}
-              onRemove={() => setPhotoState({ kind: "none" })}
-            />
-          </>
-        )}
-
-        {error && (
-          <p
-            role="alert"
-            className="rounded-xl border border-brand-red bg-brand-charcoal px-4 py-3 text-senior-sm font-medium text-brand-white"
-          >
-            {error}
-          </p>
-        )}
-
-        <button
-          type="submit"
-          disabled={saving}
-          className="min-h-tap min-w-tap rounded-xl bg-brand-red px-6 text-senior-base font-bold text-brand-white transition active:scale-[0.98] active:bg-brand-darkred disabled:bg-brand-charcoal disabled:text-brand-white/50"
-        >
-          {saving ? "Saving…" : editingTransaction ? "Update entry" : "Save entry"}
-        </button>
-
-        {editingTransaction && (
-          <button
-            type="button"
-            onClick={resetForm}
-            className="min-h-tap text-senior-sm font-medium text-brand-white/80 underline"
-          >
-            Cancel edit
-          </button>
-        )}
-      </form>
-
-      {sortedHistory.length > 0 && (
-        <div className="flex flex-col gap-2 border-t border-brand-white/10 pt-4">
-          <h3 className="text-senior-sm font-bold text-brand-white/80">Recent entries</h3>
-          <ul className="flex max-h-64 flex-col gap-2 overflow-y-auto">
-            {sortedHistory.map((txn) => (
-              <li
-                key={txn.id}
-                className="flex items-center gap-3 rounded-xl bg-brand-black/40 px-3 py-2"
-              >
-                {txn.photo_id && <EntryPhotoThumbnail photoId={txn.photo_id} />}
-                <div className="flex flex-1 flex-col overflow-hidden">
-                  <span
-                    className={`truncate text-senior-sm font-bold ${
-                      txn.type === "OUT" ? "text-brand-red" : "text-brand-green"
-                    }`}
-                  >
-                    {txn.type === "OUT" ? "Udhar (Diye)" : "Jama (Milay)"} ·{" "}
-                    {txn.amount.toLocaleString("en-PK")}
-                  </span>
-                  <span className="truncate text-senior-xs text-brand-white/60">
-                    {formatDateTime(txn.transaction_date)}
-                    {txn.note ? ` · ${txn.note}` : ""}
-                  </span>
-                  {txn.items && txn.items.length > 0 && (
-                    <span className="truncate text-senior-xs text-brand-white/50">
-                      {txn.items.length} item{txn.items.length > 1 ? "s" : ""}:{" "}
-                      {txn.items.map((item) => item.name || "—").join(", ")}
-                    </span>
-                  )}
+          {entryType !== "SETTLE" && (
+            <>
+              <div className="flex flex-col gap-2">
+                <label htmlFor="txn-amount" className="text-senior-base font-medium text-ink">
+                  Amount
+                </label>
+                <div className="flex min-h-tap items-center gap-2 rounded-xl border border-border bg-surface px-4 focus-within:border-primary focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary">
+                  <span className="text-senior-lg font-bold text-ink-tertiary">Rs.</span>
+                  <input
+                    id="txn-amount"
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="0.01"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="0"
+                    autoFocus
+                    className="min-h-tap min-w-0 flex-1 appearance-none bg-transparent text-senior-2xl font-bold text-ink outline-none placeholder:text-ink-tertiary [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => startEdit(txn)}
-                  aria-label="Edit entry"
-                  className="flex min-h-tap min-w-tap shrink-0 items-center justify-center rounded-xl text-senior-base text-brand-white/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
-                >
-                  ✏️
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPendingDelete({ kind: "transaction", transaction: txn })}
-                  aria-label="Delete entry"
-                  className="flex min-h-tap min-w-tap shrink-0 items-center justify-center rounded-xl text-senior-base text-brand-white/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
-                >
-                  🗑️
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+              </div>
 
-      <button
-        type="button"
-        onClick={() => setPendingDelete({ kind: "customer" })}
-        className="min-h-tap min-w-tap rounded-xl border border-brand-red px-6 text-senior-base font-bold text-brand-red transition active:scale-[0.98]"
-      >
-        Delete customer
-      </button>
+              {showItems ? (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-senior-base font-medium text-ink">Items</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowItems(false);
+                        setItems([]);
+                      }}
+                      className="text-senior-xs font-medium text-ink-secondary underline"
+                    >
+                      Remove items
+                    </button>
+                  </div>
+                  <ItemizedEntryFields items={items} catalogItems={catalogItems} onChange={handleItemsChange} />
+                </div>
+              ) : (
+                <Button variant="secondary" size="sm" icon="receipt" onClick={() => setShowItems(true)}>
+                  Add Items
+                </Button>
+              )}
+            </>
+          )}
+
+          {entryType === "MILAY" && (
+            <div className="flex flex-col gap-2">
+              <SegmentedControl
+                label="Payment method"
+                value={paymentMethod}
+                onChange={(value) => {
+                  setPaymentMethod(value);
+                  setPaymentAccountId("");
+                }}
+                options={[
+                  { value: "cash", label: "Cash" },
+                  { value: "bank", label: "Bank" },
+                  { value: "wallet", label: "Wallet" },
+                ]}
+              />
+              {paymentMethod !== "cash" && (
+                accountOptions.length > 0 ? (
+                  <select
+                    aria-label={`Choose ${paymentMethod} account`}
+                    value={paymentAccountId}
+                    onChange={(e) => setPaymentAccountId(e.target.value)}
+                    className={selectClassName}
+                  >
+                    <option value="">— Choose account —</option>
+                    {accountOptions.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.account_title} ({a.bank_name})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="text-senior-xs text-ink-secondary">
+                    No {paymentMethod} account yet — add one in Bank &amp; Wallet first.
+                  </p>
+                )
+              )}
+            </div>
+          )}
+
+          <TextField
+            id="txn-date"
+            label="Date & time"
+            type="datetime-local"
+            value={dateValue}
+            onChange={(e) => setDateValue(e.target.value)}
+          />
+
+          {entryType !== "SETTLE" && (
+            <>
+              <TextField
+                id="txn-note"
+                label="Description (optional)"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="e.g. 2 bags of flour"
+              />
+
+              <PhotoAttachment
+                file={photoState.kind === "new" ? photoState.file : null}
+                existingPhotoId={photoState.kind === "existing" ? photoState.id : undefined}
+                onFileSelected={(file) => setPhotoState({ kind: "new", file })}
+                onRemove={() => setPhotoState({ kind: "none" })}
+              />
+            </>
+          )}
+
+          {error && (
+            <p role="alert" className="rounded-xl border border-danger/30 bg-danger-light px-4 py-3 text-senior-sm font-medium text-danger-dark">
+              {error}
+            </p>
+          )}
+
+          <Button
+            type="submit"
+            variant={entryType === "MILAY" ? "success" : entryType === "SETTLE" ? "primary" : "warning"}
+            loading={saving}
+            fullWidth
+          >
+            {editingTransaction
+              ? "Update Entry"
+              : entryType === "DIYE"
+                ? "Save Udhaar"
+                : entryType === "MILAY"
+                  ? "Save Payment"
+                  : "Confirm Settle"}
+          </Button>
+
+          {editingTransaction && (
+            <Button variant="ghost" fullWidth onClick={resetForm}>
+              Cancel edit
+            </Button>
+          )}
+        </form>
+      )}
 
       {pendingDelete && (
         <ConfirmDialog
@@ -632,11 +704,7 @@ export default function CustomerTransactionModal({
       )}
 
       {showReminder && (
-        <WhatsAppReminderModal
-          customer={customer}
-          onClose={() => setShowReminder(false)}
-          onSaved={onSaved}
-        />
+        <WhatsAppReminderModal customer={customer} onClose={() => setShowReminder(false)} onSaved={onSaved} />
       )}
 
       {showExportSummary && (

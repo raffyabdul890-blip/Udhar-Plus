@@ -4,7 +4,10 @@ import { useEffect, useState, type FormEvent } from "react";
 import Modal from "@/components/ui/Modal";
 import TextField from "@/components/ui/TextField";
 import SegmentedControl from "@/components/ui/SegmentedControl";
+import Button from "@/components/ui/Button";
+import { useToast } from "@/components/ui/ToastProvider";
 import PhotoAttachment from "@/components/customers/PhotoAttachment";
+import { selectClassName } from "@/components/ui/TextField";
 import {
   CASH_IN_CATEGORIES,
   CASH_OUT_CATEGORIES,
@@ -36,6 +39,7 @@ export default function AddCashbookEntryModal({
   onSaved: () => void;
   onDelete?: () => void;
 }) {
+  const showToast = useToast();
   const isExpense = existing ? Boolean(existing.is_expense) : mode === "expense";
   const [type, setType] = useState<"IN" | "OUT">(existing?.type ?? (isExpense ? "OUT" : initialType));
   const [amount, setAmount] = useState(existing ? String(existing.amount) : "");
@@ -64,6 +68,7 @@ export default function AddCashbookEntryModal({
   const accountOptions = bankAccounts.filter(
     (a) => getFinancialInstitution(a.bank_code)?.category === paymentMethod
   );
+  const ctaVariant = isExpense || type === "OUT" ? "warning" : "success";
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -114,6 +119,7 @@ export default function AddCashbookEntryModal({
     }
 
     setSaving(false);
+    showToast(isExpense ? "Expense added" : type === "IN" ? "Cash in recorded" : "Cash out recorded");
     onSaved();
     onClose();
   }
@@ -181,7 +187,7 @@ export default function AddCashbookEntryModal({
                   aria-label={`Choose ${paymentMethod} account`}
                   value={accountId}
                   onChange={(e) => setAccountId(e.target.value)}
-                  className="min-h-tap rounded-xl border border-brand-charcoal bg-brand-black px-4 text-senior-base text-brand-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
+                  className={selectClassName}
                 >
                   <option value="">— Choose account —</option>
                   {accountOptions.map((a) => (
@@ -191,7 +197,7 @@ export default function AddCashbookEntryModal({
                   ))}
                 </select>
               ) : (
-                <p className="text-senior-xs text-brand-white/50">
+                <p className="text-senior-xs text-ink-secondary">
                   No {paymentMethod} account yet — add one in Bank &amp; Wallet first.
                 </p>
               )
@@ -212,43 +218,30 @@ export default function AddCashbookEntryModal({
           label="Note (optional)"
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder={isExpense ? "e.g. August electricity bill" : "e.g. Daily sales collection"}
+          placeholder="e.g. Monthly shop rent"
         />
 
-        {isExpense && (
-          <PhotoAttachment
-            file={photoState.kind === "new" ? photoState.file : null}
-            existingPhotoId={photoState.kind === "existing" ? photoState.id : undefined}
-            onFileSelected={(file) => setPhotoState({ kind: "new", file })}
-            onRemove={() => setPhotoState({ kind: "none" })}
-          />
-        )}
+        <PhotoAttachment
+          file={photoState.kind === "new" ? photoState.file : null}
+          existingPhotoId={photoState.kind === "existing" ? photoState.id : undefined}
+          onFileSelected={(file) => setPhotoState({ kind: "new", file })}
+          onRemove={() => setPhotoState({ kind: "none" })}
+        />
 
         {error && (
-          <p
-            role="alert"
-            className="rounded-xl border border-brand-red bg-brand-charcoal px-4 py-3 text-senior-sm font-medium text-brand-white"
-          >
+          <p role="alert" className="rounded-xl border border-danger/30 bg-danger-light px-4 py-3 text-senior-sm font-medium text-danger-dark">
             {error}
           </p>
         )}
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="min-h-tap min-w-tap rounded-xl bg-brand-red px-6 text-senior-base font-bold text-brand-white transition active:scale-[0.98] active:bg-brand-darkred disabled:bg-brand-charcoal disabled:text-brand-white/50"
-        >
-          {saving ? "Saving…" : existing ? "Update entry" : "Save entry"}
-        </button>
+        <Button type="submit" variant={ctaVariant} loading={saving} fullWidth>
+          {existing ? "Update entry" : "Save entry"}
+        </Button>
 
-        {existing && onDelete && (
-          <button
-            type="button"
-            onClick={onDelete}
-            className="min-h-tap min-w-tap rounded-xl border border-brand-red px-6 text-senior-base font-bold text-brand-red transition active:scale-[0.98]"
-          >
+        {onDelete && (
+          <Button variant="danger" fullWidth onClick={onDelete}>
             Delete entry
-          </button>
+          </Button>
         )}
       </form>
     </Modal>

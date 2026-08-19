@@ -29,7 +29,7 @@ export default function EntryPhotoThumbnail({ photoId }: { photoId: string }) {
     <img
       src={url}
       alt=""
-      className="h-10 w-10 shrink-0 rounded-lg border border-brand-charcoal object-cover"
+      className="h-10 w-10 shrink-0 rounded-lg border border-border object-cover"
     />
   );
 }

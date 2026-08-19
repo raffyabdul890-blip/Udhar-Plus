@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Icon from "@/components/icons/Icon";
 import { DATE_RANGE_LABELS, type DateRangePreset } from "@/lib/utils/dateRange";
 
 export default function DateRangeFilter({
@@ -28,11 +29,7 @@ export default function DateRangeFilter({
 
   return (
     <div className="flex flex-col gap-2">
-      <div
-        role="tablist"
-        aria-label="Date range"
-        className="flex flex-wrap gap-2"
-      >
+      <div role="tablist" aria-label="Date range" className="flex flex-wrap gap-2">
         {presets.map((preset) => {
           const selected = preset === "custom" ? showCustom || value === "custom" : value === preset;
           return (
@@ -42,10 +39,11 @@ export default function DateRangeFilter({
               role="tab"
               aria-selected={selected}
               onClick={() => selectPreset(preset)}
-              className={`min-h-tap rounded-xl px-4 text-senior-sm font-bold transition ${
-                selected ? "bg-brand-red text-brand-white" : "bg-brand-charcoal/60 text-brand-white/70"
+              className={`flex min-h-tap items-center gap-1.5 rounded-xl px-4 text-senior-sm font-bold transition-colors ${
+                selected ? "bg-primary text-white" : "bg-surface-alt text-ink-secondary"
               }`}
             >
+              {preset === "custom" && <Icon name="calendar" size={16} />}
               {DATE_RANGE_LABELS[preset]}
             </button>
           );
@@ -53,9 +51,9 @@ export default function DateRangeFilter({
       </div>
 
       {showCustom && (
-        <div className="flex flex-wrap items-end gap-2 rounded-xl border border-brand-charcoal p-3">
+        <div className="flex flex-wrap items-end gap-2 rounded-xl border border-border bg-surface p-3">
           <div className="flex flex-col gap-1">
-            <label htmlFor="date-range-start" className="text-senior-xs font-medium text-brand-white/70">
+            <label htmlFor="date-range-start" className="text-senior-xs font-medium text-ink-secondary">
               From
             </label>
             <input
@@ -63,11 +61,11 @@ export default function DateRangeFilter({
               type="date"
               value={customRange.start}
               onChange={(e) => onChange("custom", { ...customRange, start: e.target.value })}
-              className="min-h-tap rounded-lg border border-brand-charcoal bg-transparent px-3 text-senior-sm text-brand-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
+              className="min-h-tap rounded-lg border border-border bg-surface px-3 text-senior-sm text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label htmlFor="date-range-end" className="text-senior-xs font-medium text-brand-white/70">
+            <label htmlFor="date-range-end" className="text-senior-xs font-medium text-ink-secondary">
               To
             </label>
             <input
@@ -75,7 +73,7 @@ export default function DateRangeFilter({
               type="date"
               value={customRange.end}
               onChange={(e) => onChange("custom", { ...customRange, end: e.target.value })}
-              className="min-h-tap rounded-lg border border-brand-charcoal bg-transparent px-3 text-senior-sm text-brand-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
+              className="min-h-tap rounded-lg border border-border bg-surface px-3 text-senior-sm text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             />
           </div>
         </div>

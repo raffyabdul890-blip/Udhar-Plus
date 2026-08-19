@@ -1,4 +1,8 @@
-import { DASHBOARD_TABS, type BottomTabId } from "@/components/dashboard/BottomNav";
+import Icon from "@/components/icons/Icon";
+import { NAV_ITEMS, type BottomTabId } from "@/components/dashboard/BottomNav";
+
+const PRIMARY_ITEMS = NAV_ITEMS.filter((item) => item.id !== "more");
+const MORE_ITEM = NAV_ITEMS.find((item) => item.id === "more")!;
 
 /** Left rail shown at `lg:` and up — BottomNav stays the mobile source of truth for the tab list. */
 export default function DesktopSidebar({
@@ -13,11 +17,16 @@ export default function DesktopSidebar({
   return (
     <nav
       aria-label="Main (desktop)"
-      className="hidden w-64 shrink-0 flex-col gap-1 border-r border-brand-white/10 bg-brand-charcoal/20 px-3 py-6 lg:flex"
+      className="hidden w-64 shrink-0 flex-col gap-1 border-r border-border bg-surface px-3 py-6 lg:flex"
     >
-      <p className="truncate px-3 pb-6 text-senior-lg font-bold text-brand-white">{primaryLabel}</p>
+      <div className="flex items-center gap-2 px-3 pb-6">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-white">
+          <Icon name="khata" size={18} />
+        </div>
+        <p className="truncate text-senior-lg font-bold text-ink">{primaryLabel}</p>
+      </div>
 
-      {DASHBOARD_TABS.map((tab) => {
+      {PRIMARY_ITEMS.map((tab) => {
         const selected = tab.id === active;
         return (
           <button
@@ -25,20 +34,29 @@ export default function DesktopSidebar({
             type="button"
             onClick={() => onChange(tab.id)}
             aria-current={selected ? "page" : undefined}
-            className={`flex min-h-tap items-center gap-3 rounded-xl px-3 text-senior-base font-bold transition ${
-              selected ? "bg-brand-red text-brand-white" : "text-brand-white/70 hover:bg-brand-white/5"
+            className={`flex min-h-tap items-center gap-3 rounded-xl px-3 text-senior-base font-bold transition-colors duration-150 ${
+              selected ? "bg-primary-light text-primary" : "text-ink-secondary hover:bg-surface-alt"
             }`}
           >
-            <span aria-hidden="true" className="text-senior-lg leading-none">
-              {tab.icon}
-            </span>
+            <Icon name={tab.icon} size={20} />
             <span>{tab.label}</span>
-            <span dir="rtl" className="ml-auto text-senior-xs opacity-70">
-              {tab.labelUrdu}
-            </span>
           </button>
         );
       })}
+
+      <div className="my-3 border-t border-border" />
+
+      <button
+        type="button"
+        onClick={() => onChange(MORE_ITEM.id)}
+        aria-current={active === MORE_ITEM.id ? "page" : undefined}
+        className={`flex min-h-tap items-center gap-3 rounded-xl px-3 text-senior-base font-bold transition-colors duration-150 ${
+          active === MORE_ITEM.id ? "bg-primary-light text-primary" : "text-ink-secondary hover:bg-surface-alt"
+        }`}
+      >
+        <Icon name={MORE_ITEM.icon} size={20} />
+        <span>Settings</span>
+      </button>
     </nav>
   );
 }

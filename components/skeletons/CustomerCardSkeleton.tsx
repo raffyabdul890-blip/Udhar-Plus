@@ -8,7 +8,7 @@ function ShimmerBlock({ className }: { className: string }) {
 
 function CustomerCardShape() {
   return (
-    <div className="flex min-h-tap items-center gap-4 rounded-xl border border-brand-white/10 bg-brand-charcoal/40 p-4">
+    <div className="flex min-h-tap items-center gap-4 rounded-xl border border-border bg-surface p-4">
       <ShimmerBlock className="h-12 w-12 shrink-0 rounded-full" />
 
       <div className="flex flex-1 flex-col gap-2">

@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import DateRangeFilter from "@/components/ui/DateRangeFilter";
 import SimpleBarChart from "@/components/reports/SimpleBarChart";
+import Amount from "@/components/ui/Amount";
+import Badge from "@/components/ui/Badge";
 import { CustomerCardSkeletonList } from "@/components/skeletons/CustomerCardSkeleton";
 import CustomerTransactionModal from "@/components/customers/CustomerTransactionModal";
 import BankTransactionModal from "@/components/bank/BankTransactionModal";
@@ -31,6 +33,32 @@ function isSaleTransaction(t: LocalTransaction): boolean {
 
 function isCashEntry(entry: CashbookEntry): boolean {
   return (entry.payment_method ?? "cash") === "cash";
+}
+
+function StatCard({
+  label,
+  value,
+  tone = "ink",
+  hint,
+}: {
+  label: string;
+  value: number;
+  tone?: "ink" | "danger" | "success" | "primary";
+  hint?: string;
+}) {
+  const toneClass = {
+    ink: "text-ink",
+    danger: "text-danger",
+    success: "text-success-dark",
+    primary: "text-primary",
+  }[tone];
+  return (
+    <div className="rounded-xl border border-border bg-surface p-3">
+      <p className="text-senior-xs text-ink-secondary">{label}</p>
+      <Amount value={value} className={`text-senior-lg font-bold ${toneClass}`} />
+      {hint && <p className="text-senior-xs text-ink-tertiary">{hint}</p>}
+    </div>
+  );
 }
 
 export default function ReportsTab({ userId, shopLabel }: { userId: string; shopLabel: string }) {
@@ -154,192 +182,131 @@ export default function ReportsTab({ userId, shopLabel }: { userId: string; shop
         }}
       />
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-senior-base font-bold text-brand-white">Business Overview</h2>
-        <div className="grid grid-cols-3 gap-2 lg:gap-3">
-          <div className="rounded-xl bg-brand-charcoal/40 p-3">
-            <p className="text-senior-xs text-brand-white/60">Receivable</p>
-            <p className="text-senior-lg font-bold text-brand-red">
-              {totalReceivable.toLocaleString("en-PK")}
-            </p>
-          </div>
-          <div className="rounded-xl bg-brand-charcoal/40 p-3">
-            <p className="text-senior-xs text-brand-white/60">Payable</p>
-            <p className="text-senior-lg font-bold text-brand-green">
-              {totalPayable.toLocaleString("en-PK")}
-            </p>
-          </div>
-          <div className="rounded-xl bg-brand-charcoal/40 p-3">
-            <p className="text-senior-xs text-brand-white/60">Cash Balance</p>
-            <p className="text-senior-lg font-bold text-brand-white">
-              {cashBalance.toLocaleString("en-PK")}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="text-senior-base font-bold text-brand-white">Bank &amp; Wallet</h2>
-        <div className="grid grid-cols-3 gap-2 lg:gap-3">
-          <div className="rounded-xl bg-brand-charcoal/40 p-3">
-            <p className="text-senior-xs text-brand-white/60">Total Bank</p>
-            <p className="text-senior-lg font-bold text-brand-white">
-              {totalBankBalance.toLocaleString("en-PK")}
-            </p>
-          </div>
-          <div className="rounded-xl bg-brand-charcoal/40 p-3">
-            <p className="text-senior-xs text-brand-white/60">Total Wallet</p>
-            <p className="text-senior-lg font-bold text-brand-white">
-              {totalWalletBalance.toLocaleString("en-PK")}
-            </p>
-          </div>
-          <div className="rounded-xl bg-brand-charcoal/40 p-3">
-            <p className="text-senior-xs text-brand-white/60">Liquid Balance</p>
-            <p className="text-senior-lg font-bold text-brand-green">
-              {liquidBalance.toLocaleString("en-PK")}
-            </p>
-            <p className="text-senior-xs text-brand-white/50">Cash + Bank + Wallet</p>
-          </div>
-        </div>
-        {bankAccounts.length > 0 && (
-          <ul className="flex flex-col gap-2">
-            {bankAccounts.map((account) => (
-              <li key={account.id}>
-                <button
-                  type="button"
-                  onClick={() => setOpenAccountId(account.id)}
-                  className="flex w-full items-center gap-3 rounded-xl bg-brand-charcoal/40 px-3 py-2 text-left transition active:scale-[0.99]"
-                >
-                  <BankLogoBadge bankCode={account.bank_code} size="sm" />
-                  <span className="flex-1 truncate text-senior-sm font-medium text-brand-white">
-                    {account.account_title}
-                  </span>
-                  <span className="shrink-0 text-senior-sm font-bold text-brand-white">
-                    {account.current_balance.toLocaleString("en-PK")}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="text-senior-base font-bold text-brand-white">
-          Sales &amp; Expenses — {datePreset === "custom" ? "Selected range" : ""}
-        </h2>
-        <div className="grid grid-cols-3 gap-2 lg:gap-3">
-          <div className="rounded-xl bg-brand-charcoal/40 p-3">
-            <p className="text-senior-xs text-brand-white/60">Sales</p>
-            <p className="text-senior-lg font-bold text-brand-green">
-              {totalSales.toLocaleString("en-PK")}
-            </p>
-            <p className="text-senior-xs text-brand-white/50">{salesCount} sale{salesCount === 1 ? "" : "s"}</p>
-          </div>
-          <div className="rounded-xl bg-brand-charcoal/40 p-3">
-            <p className="text-senior-xs text-brand-white/60">Expenses</p>
-            <p className="text-senior-lg font-bold text-brand-red">
-              {totalExpenses.toLocaleString("en-PK")}
-            </p>
-            <p className="text-senior-xs text-brand-white/50">
-              {expensesInRange.length} expense{expensesInRange.length === 1 ? "" : "s"}
-            </p>
-          </div>
-          <div className="rounded-xl bg-brand-charcoal/40 p-3">
-            <p className="text-senior-xs text-brand-white/60">Net Cash Flow</p>
-            <p
-              className={`text-senior-lg font-bold ${netCashFlow >= 0 ? "text-brand-green" : "text-brand-red"}`}
-            >
-              {netCashFlow.toLocaleString("en-PK")}
-            </p>
-          </div>
-        </div>
-        {salesCount > 0 && (
-          <p className="text-senior-xs text-brand-white/50">
-            Average sale: Rs. {avgSale.toLocaleString("en-PK", { maximumFractionDigits: 0 })}
-          </p>
-        )}
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="text-senior-base font-bold text-brand-white">Cash Flow</h2>
-        <div className="rounded-xl bg-brand-charcoal/40 p-4">
-          <SimpleBarChart
-            bars={[
-              { label: "Money In", value: moneyIn, colorClassName: "bg-brand-green" },
-              { label: "Money Out", value: moneyOut, colorClassName: "bg-brand-red" },
-            ]}
-          />
-        </div>
-      </section>
-
-      {expensesByCategory.length > 0 && (
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <section className="flex flex-col gap-3">
-          <h2 className="text-senior-base font-bold text-brand-white">Expenses by Category</h2>
-          <div className="rounded-xl bg-brand-charcoal/40 p-4">
+          <h2 className="text-senior-base font-bold text-ink">Business Overview</h2>
+          <div className="grid grid-cols-3 gap-2 lg:gap-3">
+            <StatCard label="Receivable" value={totalReceivable} tone="danger" />
+            <StatCard label="Payable" value={totalPayable} tone="success" />
+            <StatCard label="Cash Balance" value={cashBalance} />
+          </div>
+        </section>
+
+        <section className="flex flex-col gap-3">
+          <h2 className="text-senior-base font-bold text-ink">Bank &amp; Wallet</h2>
+          <div className="grid grid-cols-3 gap-2 lg:gap-3">
+            <StatCard label="Total Bank" value={totalBankBalance} />
+            <StatCard label="Total Wallet" value={totalWalletBalance} />
+            <StatCard label="Liquid Balance" value={liquidBalance} tone="success" hint="Cash + Bank + Wallet" />
+          </div>
+          {bankAccounts.length > 0 && (
+            <ul className="flex flex-col gap-2">
+              {bankAccounts.map((account) => (
+                <li key={account.id}>
+                  <button
+                    type="button"
+                    onClick={() => setOpenAccountId(account.id)}
+                    className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2 text-left transition active:scale-[0.99] active:bg-surface-alt"
+                  >
+                    <BankLogoBadge bankCode={account.bank_code} size="sm" />
+                    <span className="flex-1 truncate text-senior-sm font-medium text-ink">
+                      {account.account_title}
+                    </span>
+                    <span className="shrink-0 text-senior-sm font-bold text-ink">
+                      {account.current_balance.toLocaleString("en-PK")}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="flex flex-col gap-3">
+          <h2 className="text-senior-base font-bold text-ink">
+            Sales &amp; Expenses {datePreset === "custom" ? "— Selected range" : ""}
+          </h2>
+          <div className="grid grid-cols-3 gap-2 lg:gap-3">
+            <StatCard label="Sales" value={totalSales} tone="success" hint={`${salesCount} sale${salesCount === 1 ? "" : "s"}`} />
+            <StatCard label="Expenses" value={totalExpenses} tone="danger" hint={`${expensesInRange.length} expense${expensesInRange.length === 1 ? "" : "s"}`} />
+            <StatCard label="Net Cash Flow" value={netCashFlow} tone={netCashFlow >= 0 ? "success" : "danger"} />
+          </div>
+          {salesCount > 0 && (
+            <p className="text-senior-xs text-ink-tertiary">
+              Average sale: Rs. {avgSale.toLocaleString("en-PK", { maximumFractionDigits: 0 })}
+            </p>
+          )}
+        </section>
+
+        <section className="flex flex-col gap-3">
+          <h2 className="text-senior-base font-bold text-ink">Cash Flow</h2>
+          <div className="rounded-xl border border-border bg-surface p-4">
             <SimpleBarChart
-              bars={expensesByCategory.map(([category, total]) => ({ label: category, value: total }))}
+              bars={[
+                { label: "Money In", value: moneyIn, colorClassName: "bg-success" },
+                { label: "Money Out", value: moneyOut, colorClassName: "bg-danger" },
+              ]}
             />
           </div>
         </section>
-      )}
 
-      {topItems.length > 0 && (
-        <section className="flex flex-col gap-3">
-          <h2 className="text-senior-base font-bold text-brand-white">Top Selling Items</h2>
-          <ul className="flex flex-col gap-2">
-            {topItems.map((item) => (
-              <li
-                key={item.name}
-                className="flex items-center gap-3 rounded-xl bg-brand-charcoal/40 px-3 py-2"
-              >
-                <span className="flex-1 truncate text-senior-sm font-medium text-brand-white">
-                  {item.name}
-                </span>
-                <span className="text-senior-xs text-brand-white/60">x{item.quantity}</span>
-                <span className="text-senior-sm font-bold text-brand-white">
-                  {item.total.toLocaleString("en-PK")}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <section className="flex flex-col gap-3">
-        <h2 className="text-senior-base font-bold text-brand-white">Top Customers</h2>
-        {topCustomers.length === 0 ? (
-          <p className="text-senior-sm text-brand-white/60">Not enough data yet.</p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {topCustomers.map((customer) => (
-              <li key={customer.id}>
-                <button
-                  type="button"
-                  onClick={() => setOpenCustomerId(customer.id)}
-                  className="flex w-full items-center gap-3 rounded-xl bg-brand-charcoal/40 px-3 py-2 text-left transition active:scale-[0.99]"
-                >
-                  <span className="flex-1 truncate text-senior-sm font-medium text-brand-white">
-                    {customer.name}
-                  </span>
-                  <span
-                    className={`shrink-0 rounded-full px-2 py-0.5 text-senior-xs font-bold ${
-                      customer.current_balance > 0
-                        ? "bg-brand-red/20 text-brand-red"
-                        : "bg-brand-green/20 text-brand-green"
-                    }`}
-                  >
-                    {customer.current_balance > 0 ? "TO RECEIVE" : "TO PAY"}
-                  </span>
-                  <span className="shrink-0 text-senior-sm font-bold text-brand-white">
-                    {Math.abs(customer.current_balance).toLocaleString("en-PK")}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
+        {expensesByCategory.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <h2 className="text-senior-base font-bold text-ink">Expenses by Category</h2>
+            <div className="rounded-xl border border-border bg-surface p-4">
+              <SimpleBarChart
+                bars={expensesByCategory.map(([category, total]) => ({
+                  label: category,
+                  value: total,
+                  colorClassName: "bg-danger",
+                }))}
+              />
+            </div>
+          </section>
         )}
-      </section>
+
+        {topItems.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <h2 className="text-senior-base font-bold text-ink">Top Selling Items</h2>
+            <ul className="flex flex-col gap-2">
+              {topItems.map((item) => (
+                <li key={item.name} className="flex items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2">
+                  <span className="flex-1 truncate text-senior-sm font-medium text-ink">{item.name}</span>
+                  <span className="text-senior-xs text-ink-tertiary">x{item.quantity}</span>
+                  <span className="text-senior-sm font-bold text-ink">{item.total.toLocaleString("en-PK")}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <section className="flex flex-col gap-3">
+          <h2 className="text-senior-base font-bold text-ink">Top Customers</h2>
+          {topCustomers.length === 0 ? (
+            <p className="text-senior-sm text-ink-secondary">Not enough data yet.</p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {topCustomers.map((customer) => (
+                <li key={customer.id}>
+                  <button
+                    type="button"
+                    onClick={() => setOpenCustomerId(customer.id)}
+                    className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2 text-left transition active:scale-[0.99] active:bg-surface-alt"
+                  >
+                    <span className="flex-1 truncate text-senior-sm font-medium text-ink">{customer.name}</span>
+                    <Badge variant={customer.current_balance > 0 ? "danger" : "success"}>
+                      {customer.current_balance > 0 ? "To Receive" : "To Pay"}
+                    </Badge>
+                    <span className="shrink-0 text-senior-sm font-bold text-ink">
+                      {Math.abs(customer.current_balance).toLocaleString("en-PK")}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
 
       {openCustomer && (
         <CustomerTransactionModal

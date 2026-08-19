@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import Button from "@/components/ui/Button";
+import Badge from "@/components/ui/Badge";
+import EmptyState from "@/components/ui/EmptyState";
 import { CustomerCardSkeletonList } from "@/components/skeletons/CustomerCardSkeleton";
 import AddItemModal from "@/components/items/AddItemModal";
 import { deleteItem, getItems, type LocalItem } from "@/lib/db/offlineStorage";
@@ -40,11 +43,9 @@ export default function ItemsTab({ userId }: { userId: string }) {
       {loading ? (
         <CustomerCardSkeletonList count={3} label="Loading items" />
       ) : items.length === 0 ? (
-        <p className="rounded-xl border border-brand-white/10 bg-brand-charcoal/40 p-6 text-center text-senior-base text-brand-white/80">
-          No items yet. Add your first product to start tracking stock.
-        </p>
+        <EmptyState icon="items" title="No items yet" description="Add your first product to start tracking stock." />
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => {
             const threshold = item.low_stock_threshold ?? DEFAULT_LOW_STOCK_THRESHOLD;
             const lowStock = item.stock_quantity <= threshold;
@@ -53,26 +54,18 @@ export default function ItemsTab({ userId }: { userId: string }) {
                 <button
                   type="button"
                   onClick={() => setModal({ kind: "edit", item })}
-                  className="flex min-h-tap w-full items-center gap-4 rounded-xl border border-brand-white/10 bg-brand-charcoal/40 p-4 text-left transition active:scale-[0.99]"
+                  className="flex min-h-tap w-full flex-col gap-2 rounded-xl border border-border bg-surface p-4 text-left shadow-card transition active:scale-[0.99] active:bg-surface-alt"
                 >
-                  <div className="flex flex-1 flex-col gap-1 overflow-hidden">
-                    <span className="truncate text-senior-base font-bold text-brand-white">
-                      {item.name}
-                    </span>
-                    <span className="flex flex-wrap items-center gap-2 truncate text-senior-sm text-brand-white/70">
-                      Stock: {item.stock_quantity}
-                      {lowStock && (
-                        <span className="rounded-full bg-brand-red px-2 py-0.5 text-senior-xs font-bold text-brand-white">
-                          Low stock
-                        </span>
-                      )}
-                    </span>
-                    {item.selling_price != null && (
-                      <span className="truncate text-senior-xs text-brand-white/50">
-                        Sells at {item.selling_price.toLocaleString("en-PK")}
-                      </span>
-                    )}
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="truncate text-senior-base font-bold text-ink">{item.name}</span>
+                    {lowStock && <Badge variant="warning">Low stock</Badge>}
                   </div>
+                  <span className="text-senior-sm text-ink-secondary">Stock: {item.stock_quantity}</span>
+                  {item.selling_price != null && (
+                    <span className="text-senior-xs text-ink-tertiary">
+                      Sells at {item.selling_price.toLocaleString("en-PK")}
+                    </span>
+                  )}
                 </button>
               </li>
             );
@@ -80,13 +73,9 @@ export default function ItemsTab({ userId }: { userId: string }) {
         </ul>
       )}
 
-      <button
-        type="button"
-        onClick={() => setModal({ kind: "add" })}
-        className="min-h-tap min-w-tap rounded-xl bg-brand-red px-6 text-senior-base font-bold text-brand-white transition active:scale-[0.98] active:bg-brand-darkred"
-      >
-        + Add Item
-      </button>
+      <Button icon="plus" fullWidth onClick={() => setModal({ kind: "add" })}>
+        Add Item
+      </Button>
 
       {(modal.kind === "add" || modal.kind === "edit") && (
         <AddItemModal

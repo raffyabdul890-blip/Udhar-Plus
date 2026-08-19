@@ -10,12 +10,12 @@
   }
 
   body {
-    @apply bg-brand-black text-brand-white antialiased;
+    @apply bg-canvas text-ink antialiased;
     font-variant-numeric: tabular-nums;
   }
 
   :focus-visible {
-    @apply outline outline-2 outline-offset-2 outline-brand-white;
+    @apply outline outline-2 outline-offset-2 outline-primary;
   }
 }
 

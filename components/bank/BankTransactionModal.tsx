@@ -5,6 +5,11 @@ import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import TextField from "@/components/ui/TextField";
 import SegmentedControl from "@/components/ui/SegmentedControl";
+import Button from "@/components/ui/Button";
+import Badge from "@/components/ui/Badge";
+import Amount from "@/components/ui/Amount";
+import Icon from "@/components/icons/Icon";
+import { useToast } from "@/components/ui/ToastProvider";
 import TransferModal from "@/components/bank/TransferModal";
 import {
   deleteBankAccountWithHistory,
@@ -55,6 +60,7 @@ export default function BankTransactionModal({
   onSaved: () => void;
   onDeleted: () => void;
 }) {
+  const showToast = useToast();
   const [transactions, setTransactions] = useState<LocalTransaction[]>([]);
   const [editingTransaction, setEditingTransaction] = useState<LocalTransaction | null>(null);
   const [type, setType] = useState<"IN" | "OUT">("IN");
@@ -142,6 +148,7 @@ export default function BankTransactionModal({
     }
 
     setSaving(false);
+    showToast(editingTransaction ? "Entry updated" : type === "IN" ? "Money added" : "Money removed");
     onSaved();
     await reloadHistory();
     resetForm();
@@ -167,21 +174,16 @@ export default function BankTransactionModal({
   return (
     <Modal title={account.account_title} onClose={onClose}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <p className="text-senior-sm text-brand-white/70">
-          Current balance:{" "}
-          <span
-            className={
-              account.current_balance < 0
-                ? "font-bold text-brand-red"
-                : "font-bold text-brand-white"
-            }
-          >
-            {account.current_balance.toLocaleString("en-PK")}
-          </span>
-        </p>
+        <div className="rounded-2xl border border-border bg-surface-alt p-5 text-center">
+          <p className="text-senior-sm font-medium text-ink-secondary">Current Balance</p>
+          <Amount
+            value={account.current_balance}
+            className={`text-senior-2xl font-bold ${account.current_balance < 0 ? "text-danger" : "text-ink"}`}
+          />
+        </div>
 
         {editingTransaction?.link_kind === "transfer_leg" ? (
-          <p className="text-senior-sm text-brand-white/70">
+          <p className="text-senior-sm text-ink-secondary">
             Transfer {type === "IN" ? "in" : "out"} — editing amount, date, and note only.
           </p>
         ) : (
@@ -226,87 +228,69 @@ export default function BankTransactionModal({
         />
 
         {error && (
-          <p
-            role="alert"
-            className="rounded-xl border border-brand-red bg-brand-charcoal px-4 py-3 text-senior-sm font-medium text-brand-white"
-          >
+          <p role="alert" className="rounded-xl border border-danger/30 bg-danger-light px-4 py-3 text-senior-sm font-medium text-danger-dark">
             {error}
           </p>
         )}
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="min-h-tap min-w-tap rounded-xl bg-brand-red px-6 text-senior-base font-bold text-brand-white transition active:scale-[0.98] active:bg-brand-darkred disabled:bg-brand-charcoal disabled:text-brand-white/50"
-        >
-          {saving ? "Saving…" : editingTransaction ? "Update entry" : "Save entry"}
-        </button>
+        <Button type="submit" variant={type === "IN" ? "success" : "warning"} loading={saving} fullWidth>
+          {editingTransaction ? "Update entry" : "Save entry"}
+        </Button>
 
         {editingTransaction && (
-          <button
-            type="button"
-            onClick={resetForm}
-            className="min-h-tap text-senior-sm font-medium text-brand-white/80 underline"
-          >
+          <Button variant="ghost" fullWidth onClick={resetForm}>
             Cancel edit
-          </button>
+          </Button>
         )}
 
         {accounts.length > 1 && !editingTransaction && (
-          <button
-            type="button"
-            onClick={() => setShowTransfer(true)}
-            className="min-h-tap rounded-xl border border-brand-charcoal px-6 text-senior-base font-bold text-brand-white transition active:scale-[0.98]"
-          >
-            ⇄ Transfer to Another Account
-          </button>
+          <Button variant="secondary" icon="transfer" fullWidth onClick={() => setShowTransfer(true)}>
+            Transfer to Another Account
+          </Button>
         )}
       </form>
 
       {history.length > 0 && (
-        <div className="flex flex-col gap-2 border-t border-brand-white/10 pt-4">
-          <h3 className="text-senior-sm font-bold text-brand-white/80">Recent entries</h3>
+        <div className="flex flex-col gap-2 border-t border-border pt-4">
+          <h3 className="text-senior-sm font-bold text-ink-secondary">Recent entries</h3>
           <ul className="flex max-h-48 flex-col gap-2 overflow-y-auto">
             {history.map((txn) => {
               const blocked = isBlockedFromDirectEdit(txn);
               return (
-                <li
-                  key={txn.id}
-                  className="flex items-center gap-3 rounded-xl bg-brand-black/40 px-3 py-2"
-                >
+                <li key={txn.id} className="flex items-center gap-3 rounded-xl bg-surface-alt px-3 py-2">
                   <div className="flex flex-1 flex-col overflow-hidden">
-                    <span className="truncate text-senior-sm font-medium text-brand-white">
+                    <span className="truncate text-senior-sm font-medium text-ink">
                       {txn.link_kind === "transfer_leg" ? "Transfer" : `Cash ${txn.type}`} ·{" "}
                       {txn.amount.toLocaleString("en-PK")}
                     </span>
-                    <span className="truncate text-senior-xs text-brand-white/60">
+                    <span className="truncate text-senior-xs text-ink-secondary">
                       {formatDateTime(txn.transaction_date)}
                       {txn.note ? ` · ${txn.note}` : ""}
                     </span>
                   </div>
                   {blocked ? (
-                    <span className="shrink-0 rounded-full bg-brand-charcoal px-2 py-1 text-senior-xs font-medium text-brand-white/60">
+                    <Badge>
                       {txn.link_kind === "customer_payment_leg"
                         ? "Linked to Customer Payment"
                         : (linkLabels[txn.id] ?? "Linked to Expense")}
-                    </span>
+                    </Badge>
                   ) : (
                     <>
                       <button
                         type="button"
                         onClick={() => startEdit(txn)}
                         aria-label="Edit entry"
-                        className="flex min-h-tap min-w-tap shrink-0 items-center justify-center rounded-xl text-senior-base text-brand-white/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
+                        className="flex min-h-tap min-w-tap shrink-0 items-center justify-center rounded-xl text-ink-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                       >
-                        ✏️
+                        <Icon name="edit" size={18} />
                       </button>
                       <button
                         type="button"
                         onClick={() => setPendingDelete({ kind: "transaction", transaction: txn })}
                         aria-label="Delete entry"
-                        className="flex min-h-tap min-w-tap shrink-0 items-center justify-center rounded-xl text-senior-base text-brand-white/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
+                        className="flex min-h-tap min-w-tap shrink-0 items-center justify-center rounded-xl text-ink-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                       >
-                        🗑️
+                        <Icon name="trash" size={18} />
                       </button>
                     </>
                   )}
@@ -317,13 +301,9 @@ export default function BankTransactionModal({
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={() => setPendingDelete({ kind: "account" })}
-        className="min-h-tap min-w-tap rounded-xl border border-brand-red px-6 text-senior-base font-bold text-brand-red transition active:scale-[0.98]"
-      >
+      <Button variant="danger" size="sm" onClick={() => setPendingDelete({ kind: "account" })}>
         Delete account
-      </button>
+      </Button>
 
       {pendingDelete && (
         <ConfirmDialog

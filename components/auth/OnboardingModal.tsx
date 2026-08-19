@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Modal from "@/components/ui/Modal";
+import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
 import { markOnboardingCompleteLocally } from "@/lib/onboarding";
 
@@ -28,28 +29,23 @@ export default function OnboardingModal({
   return (
     <Modal title="Welcome to Udhar Plus" onClose={() => {}} dismissable={false}>
       <div className="flex flex-col gap-4">
-        <p className="text-senior-base text-brand-white/80">
+        <p className="text-senior-base text-ink-secondary">
           Please review and accept our Terms and Conditions to get started.
         </p>
 
-        <label className="flex min-h-tap cursor-pointer items-center gap-3 text-senior-sm text-brand-white/80">
+        <label className="flex min-h-tap cursor-pointer items-center gap-3 text-senior-sm text-ink-secondary">
           <input
             type="checkbox"
             checked={agreed}
             onChange={(e) => setAgreed(e.target.checked)}
-            className="h-5 w-5 shrink-0 rounded border-brand-charcoal accent-brand-red focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
+            className="h-5 w-5 shrink-0 rounded border-border accent-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           />
           <span>I agree to the Terms and Conditions</span>
         </label>
 
-        <button
-          type="button"
-          onClick={handleGetStarted}
-          disabled={!agreed}
-          className="min-h-tap min-w-tap rounded-xl bg-brand-red px-6 text-senior-base font-bold text-brand-white transition active:scale-[0.98] active:bg-brand-darkred disabled:bg-brand-charcoal disabled:text-brand-white/50"
-        >
+        <Button onClick={handleGetStarted} disabled={!agreed} fullWidth>
           Get Started
-        </button>
+        </Button>
       </div>
     </Modal>
   );

@@ -13,11 +13,11 @@ export default function LegalModal({
   return (
     <Modal title={title} onClose={onClose}>
       <div className="flex max-h-[65vh] flex-col gap-3 overflow-y-auto">
-        <p className="rounded-xl border border-brand-charcoal bg-brand-black/40 p-3 text-senior-xs text-brand-white/60">
+        <p className="rounded-xl border border-border bg-surface-alt p-3 text-senior-xs text-ink-secondary">
           {LEGAL_DISCLAIMER}
         </p>
         {paragraphs.map((paragraph, index) => (
-          <p key={index} className="text-senior-sm text-brand-white/80">
+          <p key={index} className="text-senior-sm text-ink-secondary">
             {paragraph}
           </p>
         ))}

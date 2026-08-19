@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import SyncManagerMount from "@/components/sync/SyncManagerMount";
+import ToastProvider from "@/components/ui/ToastProvider";
 import "./globals.css";
 
 const inter = Inter({
@@ -17,7 +18,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "Udhar Plus",
   },
   icons: {
@@ -37,8 +38,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
-  themeColor: "#000000",
-  colorScheme: "dark",
+  themeColor: "#F7F7F8",
+  colorScheme: "light",
 };
 
 export default function RootLayout({
@@ -48,9 +49,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={inter.variable}>
-      <body className="min-h-screen bg-brand-black font-sans text-brand-white">
+      <body className="min-h-screen bg-canvas font-sans text-ink">
         <SyncManagerMount />
-        {children}
+        <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
   );

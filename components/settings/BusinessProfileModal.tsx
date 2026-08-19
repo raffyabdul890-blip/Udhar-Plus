@@ -3,6 +3,9 @@
 import { useState, type FormEvent } from "react";
 import Modal from "@/components/ui/Modal";
 import TextField from "@/components/ui/TextField";
+import Button from "@/components/ui/Button";
+import { useToast } from "@/components/ui/ToastProvider";
+import { selectClassName } from "@/components/ui/TextField";
 import { saveBusinessSettings, type LocalBusinessSettings } from "@/lib/db/offlineStorage";
 
 const CATEGORIES = ["Kiryana", "Pharmacy", "Mobile Shop", "General Store", "Other"];
@@ -18,6 +21,7 @@ export default function BusinessProfileModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const showToast = useToast();
   const [businessName, setBusinessName] = useState(settings?.business_name ?? "");
   const [phone, setPhone] = useState(settings?.phone ?? "");
   const [address, setAddress] = useState(settings?.address ?? "");
@@ -34,6 +38,7 @@ export default function BusinessProfileModal({
       category: category || undefined,
     });
     setSaving(false);
+    showToast("Profile saved");
     onSaved();
     onClose();
   }
@@ -67,14 +72,14 @@ export default function BusinessProfileModal({
         />
 
         <div className="flex flex-col gap-2">
-          <label htmlFor="business-category" className="text-senior-base font-medium text-brand-white">
+          <label htmlFor="business-category" className="text-senior-base font-medium text-ink">
             Business category
           </label>
           <select
             id="business-category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="min-h-tap rounded-xl border border-brand-charcoal bg-brand-black px-4 text-senior-base text-brand-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
+            className={selectClassName}
           >
             <option value="">Select a category</option>
             {CATEGORIES.map((option) => (
@@ -85,17 +90,11 @@ export default function BusinessProfileModal({
           </select>
         </div>
 
-        <p className="text-senior-xs text-brand-white/50">
-          Shop logo upload is planned for a follow-up update.
-        </p>
+        <p className="text-senior-xs text-ink-tertiary">Shop logo upload is planned for a follow-up update.</p>
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="min-h-tap min-w-tap rounded-xl bg-brand-red px-6 text-senior-base font-bold text-brand-white transition active:scale-[0.98] active:bg-brand-darkred disabled:bg-brand-charcoal disabled:text-brand-white/50"
-        >
-          {saving ? "Saving…" : "Save profile"}
-        </button>
+        <Button type="submit" loading={saving} fullWidth>
+          Save Profile
+        </Button>
       </form>
     </Modal>
   );

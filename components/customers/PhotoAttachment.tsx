@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Icon from "@/components/icons/Icon";
+import Button from "@/components/ui/Button";
 import { getPhoto } from "@/lib/db/offlineStorage";
 
 export default function PhotoAttachment({
@@ -52,7 +54,7 @@ export default function PhotoAttachment({
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-senior-base font-medium text-brand-white">Photo (optional)</span>
+      <span className="text-senior-base font-medium text-ink">Photo (optional)</span>
 
       {previewUrl ? (
         <div className="flex items-center gap-3">
@@ -60,19 +62,16 @@ export default function PhotoAttachment({
           <img
             src={previewUrl}
             alt="Attached receipt"
-            className="h-16 w-16 rounded-lg border border-brand-charcoal object-cover"
+            className="h-16 w-16 rounded-lg border border-border object-cover"
           />
-          <button
-            type="button"
-            onClick={onRemove}
-            className="min-h-tap rounded-xl border border-brand-charcoal px-4 text-senior-sm font-bold text-brand-white transition active:scale-[0.98]"
-          >
+          <Button variant="secondary" size="sm" onClick={onRemove}>
             Remove photo
-          </button>
+          </Button>
         </div>
       ) : (
-        <label className="flex min-h-tap w-fit cursor-pointer items-center gap-2 rounded-xl border border-brand-charcoal px-4 text-senior-sm font-bold text-brand-white transition active:scale-[0.98]">
-          📷 Take Photo / Attach Image
+        <label className="flex min-h-tap w-fit cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface-alt px-4 text-senior-sm font-bold text-ink-secondary transition active:scale-[0.98]">
+          <Icon name="camera" size={18} />
+          Take Photo / Attach Image
           <input
             type="file"
             accept="image/*"

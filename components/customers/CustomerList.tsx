@@ -1,6 +1,9 @@
 "use client";
 
 import { CustomerCardSkeletonList } from "@/components/skeletons/CustomerCardSkeleton";
+import EmptyState from "@/components/ui/EmptyState";
+import AvatarInitial from "@/components/ui/AvatarInitial";
+import Badge from "@/components/ui/Badge";
 import type { LocalCustomer } from "@/lib/db/offlineStorage";
 
 function formatDate(iso: string) {
@@ -26,47 +29,52 @@ export default function CustomerList({
 
   if (customers.length === 0) {
     return (
-      <p className="rounded-xl border border-brand-white/10 bg-brand-charcoal/40 p-6 text-center text-senior-base text-brand-white/80">
-        No customers yet. Add your first customer to start tracking udhar.
-      </p>
+      <EmptyState
+        icon="users"
+        title="No customers yet"
+        description="Add your first customer to start tracking udhar."
+      />
     );
   }
 
   return (
-    <ul className="flex flex-col gap-3">
-      {customers.map((customer) => {
+    <ul className="flex flex-col gap-2.5 md:grid md:grid-cols-2 md:gap-3">
+      {customers.map((customer, index) => {
         const lastEntry = customer.last_transaction_at;
         return (
-          <li key={customer.id}>
+          <li key={customer.id} style={{ animationDelay: `${Math.min(index, 8) * 30}ms` }} className="animate-fade-in-up">
             <button
               type="button"
               onClick={() => onSelectCustomer(customer)}
-              className="flex min-h-tap w-full items-center gap-4 rounded-xl border border-brand-white/10 bg-brand-charcoal/40 p-4 text-left transition active:scale-[0.99]"
+              className="flex min-h-tap w-full items-center gap-3 rounded-xl border border-border bg-surface p-4 text-left shadow-card transition active:scale-[0.99] active:bg-surface-alt"
             >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-charcoal text-senior-base font-bold text-brand-white">
-                {customer.name.charAt(0).toUpperCase()}
-              </div>
+              <AvatarInitial name={customer.name} />
 
-              <div className="flex flex-1 flex-col gap-1 overflow-hidden">
-                <span className="truncate text-senior-base font-bold text-brand-white">
-                  {customer.name}
-                </span>
-                <span className="truncate text-senior-sm text-brand-white/70">
-                  {lastEntry ? `Last entry ${formatDate(lastEntry)}` : "No entries yet"}
+              <div className="flex flex-1 flex-col gap-0.5 overflow-hidden">
+                <span className="truncate text-senior-base font-bold text-ink">{customer.name}</span>
+                <span className="truncate text-senior-xs text-ink-secondary">
+                  {customer.phone ?? (lastEntry ? `Last entry ${formatDate(lastEntry)}` : "No entries yet")}
                 </span>
               </div>
 
-              <span
-                className={`shrink-0 text-senior-lg font-bold ${
-                  customer.current_balance > 0
-                    ? "text-brand-red"
-                    : customer.current_balance < 0
-                      ? "text-brand-green"
-                      : "text-brand-white"
-                }`}
-              >
-                {customer.current_balance.toLocaleString("en-PK")}
-              </span>
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                <span
+                  className={`text-senior-base font-bold ${
+                    customer.current_balance > 0
+                      ? "text-danger"
+                      : customer.current_balance < 0
+                        ? "text-success-dark"
+                        : "text-ink"
+                  }`}
+                >
+                  {Math.abs(customer.current_balance).toLocaleString("en-PK")}
+                </span>
+                {customer.current_balance !== 0 && (
+                  <Badge variant={customer.current_balance > 0 ? "danger" : "success"}>
+                    {customer.current_balance > 0 ? "To Receive" : "To Pay"}
+                  </Badge>
+                )}
+              </div>
             </button>
           </li>
         );

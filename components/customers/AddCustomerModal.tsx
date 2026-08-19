@@ -4,6 +4,8 @@ import { useState, type FormEvent } from "react";
 import Modal from "@/components/ui/Modal";
 import TextField from "@/components/ui/TextField";
 import SegmentedControl from "@/components/ui/SegmentedControl";
+import Button from "@/components/ui/Button";
+import { useToast } from "@/components/ui/ToastProvider";
 import { recordCustomerTransaction } from "@/lib/db/ledger";
 import { addCustomer, type LocalCustomer } from "@/lib/db/offlineStorage";
 import { fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/utils/datetime";
@@ -24,6 +26,7 @@ export default function AddCustomerModal({
   /** Fires once the customer (and any opening balance) is saved — the caller decides the next screen. */
   onAdded: (customer: LocalCustomer, action: PostAddAction) => void;
 }) {
+  const showToast = useToast();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [description, setDescription] = useState("");
@@ -68,7 +71,7 @@ export default function AddCustomerModal({
       // field — an opening balance is just a first Diye/Milay entry.
       const type = openingDirection === "owes" ? ("OUT" as const) : ("IN" as const);
       // Same minute-truncated "now" convention as the transaction form's
-      // date field (fromDatetimeLocalValue(toDatetimeLocalValue(...))), not a
+      // date field (fromDatetimeLocalValue(toDatetimeLocalValue(...)), not a
       // raw full-precision timestamp — otherwise this entry's transaction_date
       // can sort as "earlier" than a same-minute entry recorded through the
       // form, even though it happened first. created_at (full ms precision)
@@ -81,6 +84,7 @@ export default function AddCustomerModal({
     }
 
     setSaving(false);
+    showToast("Customer added");
     setSavedCustomer(customer);
   }
 
@@ -88,7 +92,7 @@ export default function AddCustomerModal({
     return (
       <Modal title="Customer Added" onClose={() => onAdded(savedCustomer, "done")}>
         <div className="flex flex-col gap-4">
-          <p className="text-senior-base text-brand-white">
+          <p className="text-senior-base text-ink">
             <span className="font-bold">{savedCustomer.name}</span> has been added
             {savedCustomer.current_balance !== 0 && (
               <>
@@ -102,42 +106,26 @@ export default function AddCustomerModal({
             )}
           </p>
 
-          <button
-            type="button"
-            onClick={() => onAdded(savedCustomer, "give")}
-            className="min-h-tap rounded-xl bg-brand-red px-6 text-senior-base font-bold text-brand-white transition active:scale-[0.98] active:bg-brand-darkred"
-          >
+          <Button variant="warning" icon="khata" onClick={() => onAdded(savedCustomer, "give")}>
             Give Udhaar
-          </button>
-          <button
-            type="button"
-            onClick={() => onAdded(savedCustomer, "receive")}
-            className="min-h-tap rounded-xl border border-brand-charcoal px-6 text-senior-base font-bold text-brand-white transition active:scale-[0.98]"
-          >
+          </Button>
+          <Button variant="success" icon="cash-in" onClick={() => onAdded(savedCustomer, "receive")}>
             Receive Payment
-          </button>
+          </Button>
 
           {savedCustomer.phone ? (
-            <button
-              type="button"
-              onClick={() => onAdded(savedCustomer, "whatsapp")}
-              className="min-h-tap rounded-xl border border-brand-charcoal px-6 text-senior-base font-bold text-brand-white transition active:scale-[0.98]"
-            >
-              💬 Send WhatsApp
-            </button>
+            <Button variant="secondary" icon="whatsapp" onClick={() => onAdded(savedCustomer, "whatsapp")}>
+              Send WhatsApp
+            </Button>
           ) : (
-            <p className="text-senior-xs text-brand-white/50">
+            <p className="text-senior-xs text-ink-secondary">
               Add a phone number to send WhatsApp messages to this customer.
             </p>
           )}
 
-          <button
-            type="button"
-            onClick={() => onAdded(savedCustomer, "done")}
-            className="min-h-tap text-senior-sm font-medium text-brand-white/80 underline"
-          >
+          <Button variant="ghost" onClick={() => onAdded(savedCustomer, "done")}>
             Done
-          </button>
+          </Button>
         </div>
       </Modal>
     );
@@ -147,15 +135,11 @@ export default function AddCustomerModal({
     <Modal title="Add Customer" onClose={onClose}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {contactsPickerAvailable ? (
-          <button
-            type="button"
-            onClick={handlePickContact}
-            className="flex min-h-tap items-center justify-center gap-2 rounded-xl border border-brand-charcoal px-4 text-senior-sm font-bold text-brand-white transition active:scale-[0.98]"
-          >
-            📇 Choose from Contacts
-          </button>
+          <Button variant="secondary" icon="contact" onClick={handlePickContact}>
+            Choose from Contacts
+          </Button>
         ) : (
-          <p className="text-senior-xs text-brand-white/50">
+          <p className="text-senior-xs text-ink-secondary">
             Contact picker isn&rsquo;t supported on this device. Enter the number manually.
           </p>
         )}
@@ -207,21 +191,14 @@ export default function AddCustomerModal({
         />
 
         {error && (
-          <p
-            role="alert"
-            className="rounded-xl border border-brand-red bg-brand-charcoal px-4 py-3 text-senior-sm font-medium text-brand-white"
-          >
+          <p role="alert" className="rounded-xl border border-danger/30 bg-danger-light px-4 py-3 text-senior-sm font-medium text-danger-dark">
             {error}
           </p>
         )}
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="min-h-tap min-w-tap rounded-xl bg-brand-red px-6 text-senior-base font-bold text-brand-white transition active:scale-[0.98] active:bg-brand-darkred disabled:bg-brand-charcoal disabled:text-brand-white/50"
-        >
-          {saving ? "Saving…" : "Save customer"}
-        </button>
+        <Button type="submit" loading={saving} fullWidth>
+          Save Customer
+        </Button>
       </form>
     </Modal>
   );

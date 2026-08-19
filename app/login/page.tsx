@@ -4,6 +4,8 @@ import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from "firebase/auth";
 import TextField from "@/components/ui/TextField";
+import Button from "@/components/ui/Button";
+import Icon from "@/components/icons/Icon";
 import { createClient } from "@/lib/supabase/client";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import { hydrateFromCloud } from "@/lib/sync/syncEngine";
@@ -167,146 +169,133 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-4 py-8">
+    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-6 px-5 py-8">
       <div id={RECAPTCHA_CONTAINER_ID} />
 
-      <div>
-        <h1 className="text-senior-2xl font-bold text-brand-white">Udhar Plus</h1>
-        <p className="mt-2 text-senior-base text-brand-white/80">
-          {step === "identifier"
-            ? "Sign in with your phone number or email."
-            : `Enter the code sent to ${identifierLabel}.`}
-        </p>
+      <div className="flex flex-col items-center gap-3 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white shadow-card">
+          <Icon name="khata" size={28} />
+        </div>
+        <div>
+          <h1 className="text-senior-2xl font-bold text-ink">Udhar Plus</h1>
+          <p className="mt-1 text-senior-base text-ink-secondary">
+            {step === "identifier"
+              ? "Sign in with your phone number or email."
+              : `Enter the code sent to ${identifierLabel}.`}
+          </p>
+        </div>
       </div>
 
-      {step === "identifier" && (
-        <div
-          role="tablist"
-          aria-label="Login method"
-          className="flex gap-2 rounded-xl bg-brand-charcoal/40 p-1"
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={method === "phone"}
-            onClick={() => switchMethod("phone")}
-            className={`min-h-tap flex-1 rounded-lg text-senior-base font-bold transition ${
-              method === "phone" ? "bg-brand-red text-brand-white" : "text-brand-white/70"
-            }`}
-          >
-            Phone Number
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={method === "email"}
-            onClick={() => switchMethod("email")}
-            className={`min-h-tap flex-1 rounded-lg text-senior-base font-bold transition ${
-              method === "email" ? "bg-brand-red text-brand-white" : "text-brand-white/70"
-            }`}
-          >
-            Email Address
-          </button>
-        </div>
-      )}
+      <div className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-6 shadow-card">
+        {step === "identifier" && (
+          <div role="tablist" aria-label="Login method" className="flex gap-1 rounded-xl bg-surface-alt p-1">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={method === "phone"}
+              onClick={() => switchMethod("phone")}
+              className={`min-h-tap flex-1 rounded-lg text-senior-base font-bold transition-all duration-150 ${
+                method === "phone" ? "bg-surface text-primary shadow-card" : "text-ink-secondary"
+              }`}
+            >
+              Phone Number
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={method === "email"}
+              onClick={() => switchMethod("email")}
+              className={`min-h-tap flex-1 rounded-lg text-senior-base font-bold transition-all duration-150 ${
+                method === "email" ? "bg-surface text-primary shadow-card" : "text-ink-secondary"
+              }`}
+            >
+              Email Address
+            </button>
+          </div>
+        )}
 
-      {step === "identifier" ? (
-        <form onSubmit={handleSendOtp} noValidate className="flex flex-col gap-4">
-          {method === "phone" ? (
-            <div className="flex flex-col gap-2">
-              <label htmlFor="phone" className="text-senior-base font-medium text-brand-white">
-                Mobile number
-              </label>
-              <div className="flex items-stretch gap-2">
-                <span className="flex min-h-tap items-center rounded-xl border border-brand-charcoal bg-brand-charcoal px-4 text-senior-base font-medium text-brand-white">
-                  {PK_COUNTRY_CODE}
-                </span>
-                <input
-                  id="phone"
-                  type="tel"
-                  inputMode="numeric"
-                  autoComplete="tel-national"
-                  value={phoneDigits}
-                  onChange={(e) =>
-                    setPhoneDigits(e.target.value.replace(/\D/g, "").slice(0, 10))
-                  }
-                  className="min-h-tap flex-1 rounded-xl border border-brand-charcoal bg-transparent px-4 text-senior-base text-brand-white placeholder:text-brand-white/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
-                />
+        {step === "identifier" ? (
+          <form onSubmit={handleSendOtp} noValidate className="flex flex-col gap-4">
+            {method === "phone" ? (
+              <div className="flex flex-col gap-2">
+                <label htmlFor="phone" className="text-senior-base font-medium text-ink">
+                  Mobile number
+                </label>
+                <div className="flex items-stretch gap-2">
+                  <span className="flex min-h-tap items-center rounded-xl border border-border bg-surface-alt px-4 text-senior-base font-medium text-ink">
+                    {PK_COUNTRY_CODE}
+                  </span>
+                  <input
+                    id="phone"
+                    type="tel"
+                    inputMode="numeric"
+                    autoComplete="tel-national"
+                    value={phoneDigits}
+                    onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                    className="min-h-tap flex-1 rounded-xl border border-border bg-surface px-4 text-senior-base text-ink placeholder:text-ink-tertiary focus-visible:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  />
+                </div>
               </div>
-            </div>
-          ) : (
-            <TextField
-              id="email"
-              label="Email address"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+            ) : (
+              <TextField
+                id="email"
+                label="Email address"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            )}
+
+            {error && (
+              <p role="alert" className="rounded-xl border border-danger/30 bg-danger-light px-4 py-3 text-senior-sm font-medium text-danger-dark">
+                {error}
+              </p>
+            )}
+
+            <Button type="submit" loading={loading} fullWidth>
+              {method === "phone" && loading ? "Verifying…" : "Send code"}
+            </Button>
+          </form>
+        ) : (
+          <form onSubmit={handleVerifyOtp} noValidate className="flex flex-col gap-4">
+            <label htmlFor="otp" className="text-senior-base font-medium text-ink">
+              Verification code
+            </label>
+            <input
+              id="otp"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              className="min-h-tap w-full rounded-xl border border-border bg-surface px-4 text-senior-xl tracking-[0.3em] text-ink placeholder:text-ink-tertiary focus-visible:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             />
-          )}
 
-          {error && (
-            <p
-              role="alert"
-              className="rounded-xl border border-brand-red bg-brand-charcoal px-4 py-3 text-senior-sm font-medium text-brand-white"
+            {error && (
+              <p role="alert" className="rounded-xl border border-danger/30 bg-danger-light px-4 py-3 text-senior-sm font-medium text-danger-dark">
+                {error}
+              </p>
+            )}
+
+            <Button type="submit" loading={loading} fullWidth>
+              Verify & sign in
+            </Button>
+
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setStep("identifier");
+                setOtp("");
+                setError(null);
+              }}
             >
-              {error}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="min-h-tap min-w-tap rounded-xl bg-brand-red px-6 text-senior-base font-bold text-brand-white transition active:scale-[0.98] active:bg-brand-darkred disabled:bg-brand-charcoal disabled:text-brand-white/50"
-          >
-            {loading ? (method === "phone" ? "Verifying…" : "Sending code…") : "Send code"}
-          </button>
-        </form>
-      ) : (
-        <form onSubmit={handleVerifyOtp} noValidate className="flex flex-col gap-4">
-          <label htmlFor="otp" className="text-senior-base font-medium text-brand-white">
-            Verification code
-          </label>
-          <input
-            id="otp"
-            type="text"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            value={otp}
-            onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-            className="min-h-tap rounded-xl border border-brand-charcoal bg-transparent px-4 text-senior-xl tracking-[0.3em] text-brand-white placeholder:text-brand-white/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
-          />
-
-          {error && (
-            <p
-              role="alert"
-              className="rounded-xl border border-brand-red bg-brand-charcoal px-4 py-3 text-senior-sm font-medium text-brand-white"
-            >
-              {error}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="min-h-tap min-w-tap rounded-xl bg-brand-red px-6 text-senior-base font-bold text-brand-white transition active:scale-[0.98] active:bg-brand-darkred disabled:bg-brand-charcoal disabled:text-brand-white/50"
-          >
-            {loading ? "Verifying…" : "Verify & sign in"}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setStep("identifier");
-              setOtp("");
-              setError(null);
-            }}
-            className="min-h-tap text-senior-sm font-medium text-brand-white/80 underline"
-          >
-            {method === "phone" ? "Change number" : "Change email"}
-          </button>
-        </form>
-      )}
+              {method === "phone" ? "Change number" : "Change email"}
+            </Button>
+          </form>
+        )}
+      </div>
     </main>
   );
 }

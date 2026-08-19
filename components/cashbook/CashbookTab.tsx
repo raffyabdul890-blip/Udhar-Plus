@@ -4,6 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import DateRangeFilter from "@/components/ui/DateRangeFilter";
 import SegmentedControl from "@/components/ui/SegmentedControl";
+import Button from "@/components/ui/Button";
+import Amount from "@/components/ui/Amount";
+import Icon from "@/components/icons/Icon";
+import EmptyState from "@/components/ui/EmptyState";
 import { CustomerCardSkeletonList } from "@/components/skeletons/CustomerCardSkeleton";
 import AddCashbookEntryModal from "@/components/cashbook/AddCashbookEntryModal";
 import EntryPhotoThumbnail from "@/components/customers/EntryPhotoThumbnail";
@@ -40,7 +44,16 @@ function formatDateTime(iso: string) {
   });
 }
 
-export default function CashbookTab({ userId }: { userId: string }) {
+export default function CashbookTab({
+  userId,
+  pendingExpense,
+  onPendingActionHandled,
+}: {
+  userId: string;
+  /** Set by the Dashboard "+ Expense" quick action. */
+  pendingExpense?: boolean;
+  onPendingActionHandled?: () => void;
+}) {
   const [entries, setEntries] = useState<CashbookEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<ViewMode>("cashbook");
@@ -60,6 +73,19 @@ export default function CashbookTab({ userId }: { userId: string }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     reload();
   }, [reload]);
+
+  useEffect(() => {
+    if (pendingExpense && modal.kind === "none") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setView("expenses");
+      setModal({ kind: "add", expenseMode: true, initialType: "OUT" });
+    }
+  }, [pendingExpense, modal.kind]);
+
+  function closeModal() {
+    setModal({ kind: "none" });
+    onPendingActionHandled?.();
+  }
 
   const range = useMemo(() => resolveDateRange(datePreset, customRange), [datePreset, customRange]);
 
@@ -112,6 +138,11 @@ export default function CashbookTab({ userId }: { userId: string }) {
     [expenseEntries, range]
   );
   const expensesTotal = expensesInRange.reduce((s, e) => s + e.amount, 0);
+  const expensesByCategory = useMemo(() => {
+    const byCategory = new Map<string, number>();
+    for (const e of expensesInRange) byCategory.set(e.category, (byCategory.get(e.category) ?? 0) + e.amount);
+    return [...byCategory.entries()].sort((a, b) => b[1] - a[1]);
+  }, [expensesInRange]);
 
   if (loading) {
     return <CustomerCardSkeletonList count={3} label="Loading cashbook" />;
@@ -138,38 +169,55 @@ export default function CashbookTab({ userId }: { userId: string }) {
 
       {view === "cashbook" ? (
         <>
+          <div className="rounded-2xl border border-border bg-surface p-6 text-center shadow-card">
+            <p className="text-senior-sm font-medium text-ink-secondary">Current Cash</p>
+            <Amount value={currentBalance} className="text-senior-3xl font-bold text-ink" />
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl bg-brand-charcoal/40 p-4">
-              <p className="text-senior-xs text-brand-white/60">Opening Balance</p>
-              <p className="text-senior-lg font-bold text-brand-white">
-                {openingBalance.toLocaleString("en-PK")}
-              </p>
+            <div className="rounded-xl border border-border bg-surface p-3">
+              <p className="text-senior-xs text-ink-secondary">Opening Balance</p>
+              <Amount value={openingBalance} className="text-senior-lg font-bold text-ink" />
             </div>
-            <div className="rounded-xl bg-brand-charcoal/40 p-4">
-              <p className="text-senior-xs text-brand-white/60">Current Balance</p>
-              <p className="text-senior-lg font-bold text-brand-white">
-                {currentBalance.toLocaleString("en-PK")}
-              </p>
+            <div className="rounded-xl border border-border bg-surface p-3">
+              <p className="text-senior-xs text-ink-secondary">Today&rsquo;s Cash In</p>
+              <Amount value={cashInTotal} prefix="+" className="text-senior-lg font-bold text-success-dark" />
             </div>
-            <div className="rounded-xl bg-brand-charcoal/40 p-4">
-              <p className="text-senior-xs text-brand-white/60">Cash In</p>
-              <p className="text-senior-lg font-bold text-brand-green">
-                +{cashInTotal.toLocaleString("en-PK")}
-              </p>
+            <div className="rounded-xl border border-border bg-surface p-3">
+              <p className="text-senior-xs text-ink-secondary">Today&rsquo;s Cash Out</p>
+              <Amount value={cashOutTotal} prefix="-" className="text-senior-lg font-bold text-danger" />
             </div>
-            <div className="rounded-xl bg-brand-charcoal/40 p-4">
-              <p className="text-senior-xs text-brand-white/60">Cash Out</p>
-              <p className="text-senior-lg font-bold text-brand-red">
-                -{cashOutTotal.toLocaleString("en-PK")}
-              </p>
+            <div className="rounded-xl border border-border bg-surface p-3">
+              <p className="text-senior-xs text-ink-secondary">Entries</p>
+              <p className="text-senior-lg font-bold text-ink">{cashInRange.length}</p>
             </div>
           </div>
 
+          <div className="flex gap-2">
+            <Button
+              variant="success"
+              icon="cash-in"
+              fullWidth
+              onClick={() => setModal({ kind: "add", expenseMode: false, initialType: "IN" })}
+            >
+              Cash In
+            </Button>
+            <Button
+              variant="warning"
+              icon="cash-out"
+              fullWidth
+              onClick={() => setModal({ kind: "add", expenseMode: false, initialType: "OUT" })}
+            >
+              Cash Out
+            </Button>
+          </div>
+
           {cashHistory.length === 0 ? (
-            <p className="rounded-xl border border-brand-white/10 bg-brand-charcoal/40 p-6 text-center text-senior-base text-brand-white/80">
-              No cash entries {datePreset === "today" ? "today" : "in this range"}. Add your first
-              Cash In or Cash Out.
-            </p>
+            <EmptyState
+              icon="cashbook"
+              title="No cash entries"
+              description={`No entries ${datePreset === "today" ? "today" : "in this range"} yet.`}
+            />
           ) : (
             <ul className="flex flex-col gap-2">
               {cashHistory.map(({ entry, balance }) => (
@@ -177,22 +225,21 @@ export default function CashbookTab({ userId }: { userId: string }) {
                   <button
                     type="button"
                     onClick={() => setModal({ kind: "edit", entry })}
-                    className="flex w-full items-center gap-3 rounded-xl bg-brand-charcoal/40 px-3 py-2 text-left transition active:scale-[0.99]"
+                    className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2.5 text-left transition active:scale-[0.99] active:bg-surface-alt"
                   >
                     <span
-                      aria-hidden="true"
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-senior-sm font-bold ${
-                        entry.type === "IN" ? "bg-brand-green/20 text-brand-green" : "bg-brand-red/20 text-brand-red"
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                        entry.type === "IN" ? "bg-success-light text-success-dark" : "bg-danger-light text-danger-dark"
                       }`}
                     >
-                      {entry.type === "IN" ? "+" : "−"}
+                      <Icon name={entry.type === "IN" ? "cash-in" : "cash-out"} size={17} />
                     </span>
                     <div className="flex flex-1 flex-col overflow-hidden">
-                      <span className="truncate text-senior-sm font-bold text-brand-white">
+                      <span className="truncate text-senior-sm font-bold text-ink">
                         {entry.category}
                         {entry.is_expense ? " (Expense)" : ""}
                       </span>
-                      <span className="truncate text-senior-xs text-brand-white/60">
+                      <span className="truncate text-senior-xs text-ink-secondary">
                         {formatDateTime(entry.entry_date)}
                         {entry.note ? ` · ${entry.note}` : ""}
                       </span>
@@ -200,13 +247,13 @@ export default function CashbookTab({ userId }: { userId: string }) {
                     <div className="flex shrink-0 flex-col items-end">
                       <span
                         className={`text-senior-sm font-bold ${
-                          entry.type === "IN" ? "text-brand-green" : "text-brand-red"
+                          entry.type === "IN" ? "text-success-dark" : "text-danger"
                         }`}
                       >
                         {entry.type === "IN" ? "+" : "-"}
                         {entry.amount.toLocaleString("en-PK")}
                       </span>
-                      <span className="text-senior-xs text-brand-white/50">
+                      <span className="text-senior-xs text-ink-tertiary">
                         Bal. {balance.toLocaleString("en-PK")}
                       </span>
                     </div>
@@ -215,42 +262,49 @@ export default function CashbookTab({ userId }: { userId: string }) {
               ))}
             </ul>
           )}
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setModal({ kind: "add", expenseMode: false, initialType: "IN" })}
-              className="min-h-tap flex-1 rounded-xl bg-brand-green px-4 text-senior-base font-bold text-brand-black transition active:scale-[0.98]"
-            >
-              + Cash In
-            </button>
-            <button
-              type="button"
-              onClick={() => setModal({ kind: "add", expenseMode: false, initialType: "OUT" })}
-              className="min-h-tap flex-1 rounded-xl bg-brand-red px-4 text-senior-base font-bold text-brand-white transition active:scale-[0.98] active:bg-brand-darkred"
-            >
-              + Cash Out
-            </button>
-          </div>
         </>
       ) : (
         <>
-          <div className="rounded-xl bg-brand-charcoal/40 p-4">
-            <p className="text-senior-xs text-brand-white/60">
+          <div className="rounded-2xl border border-border bg-surface p-6 text-center shadow-card">
+            <p className="text-senior-sm font-medium text-ink-secondary">
               Total Expenses {datePreset === "today" ? "Today" : ""}
             </p>
-            <p className="text-senior-lg font-bold text-brand-red">
-              {expensesTotal.toLocaleString("en-PK")}
-            </p>
-            <p className="text-senior-xs text-brand-white/50">
+            <Amount value={expensesTotal} className="text-senior-3xl font-bold text-danger" />
+            <p className="text-senior-xs text-ink-tertiary">
               {expensesInRange.length} expense{expensesInRange.length === 1 ? "" : "s"}
             </p>
           </div>
 
+          {expensesByCategory.length > 0 && (
+            <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4">
+              {expensesByCategory.map(([category, total]) => {
+                const pct = Math.max(2, Math.round((total / expensesTotal) * 100));
+                return (
+                  <div key={category} className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between text-senior-sm">
+                      <span className="truncate font-medium text-ink">{category}</span>
+                      <span className="shrink-0 font-bold text-ink">{total.toLocaleString("en-PK")}</span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-surface-alt">
+                      <div className="h-full rounded-full bg-danger" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <Button
+            variant="warning"
+            icon="plus"
+            fullWidth
+            onClick={() => setModal({ kind: "add", expenseMode: true, initialType: "OUT" })}
+          >
+            Add Expense
+          </Button>
+
           {expensesInRange.length === 0 ? (
-            <p className="rounded-xl border border-brand-white/10 bg-brand-charcoal/40 p-6 text-center text-senior-base text-brand-white/80">
-              No expenses yet. Add an expense to start tracking your spending.
-            </p>
+            <EmptyState icon="cash-out" title="No expenses yet" description="Add an expense to start tracking your spending." />
           ) : (
             <ul className="flex flex-col gap-2">
               {expensesInRange.map((entry) => (
@@ -258,20 +312,23 @@ export default function CashbookTab({ userId }: { userId: string }) {
                   <button
                     type="button"
                     onClick={() => setModal({ kind: "edit", entry })}
-                    className="flex w-full items-center gap-3 rounded-xl bg-brand-charcoal/40 px-3 py-2 text-left transition active:scale-[0.99]"
+                    className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2.5 text-left transition active:scale-[0.99] active:bg-surface-alt"
                   >
-                    {entry.photo_id && <EntryPhotoThumbnail photoId={entry.photo_id} />}
-                    <div className="flex flex-1 flex-col overflow-hidden">
-                      <span className="truncate text-senior-sm font-bold text-brand-white">
-                        {entry.category}
+                    {entry.photo_id ? (
+                      <EntryPhotoThumbnail photoId={entry.photo_id} />
+                    ) : (
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-danger-light text-danger-dark">
+                        <Icon name="cash-out" size={16} />
                       </span>
-                      <span className="truncate text-senior-xs text-brand-white/60">
-                        {formatDateTime(entry.entry_date)} ·{" "}
-                        {(entry.payment_method ?? "cash").toUpperCase()}
+                    )}
+                    <div className="flex flex-1 flex-col overflow-hidden">
+                      <span className="truncate text-senior-sm font-bold text-ink">{entry.category}</span>
+                      <span className="truncate text-senior-xs text-ink-secondary">
+                        {formatDateTime(entry.entry_date)} · {(entry.payment_method ?? "cash").toUpperCase()}
                         {entry.note ? ` · ${entry.note}` : ""}
                       </span>
                     </div>
-                    <span className="shrink-0 text-senior-sm font-bold text-brand-red">
+                    <span className="shrink-0 text-senior-sm font-bold text-danger">
                       -{entry.amount.toLocaleString("en-PK")}
                     </span>
                   </button>
@@ -279,14 +336,6 @@ export default function CashbookTab({ userId }: { userId: string }) {
               ))}
             </ul>
           )}
-
-          <button
-            type="button"
-            onClick={() => setModal({ kind: "add", expenseMode: true, initialType: "OUT" })}
-            className="min-h-tap min-w-tap rounded-xl bg-brand-red px-6 text-senior-base font-bold text-brand-white transition active:scale-[0.98] active:bg-brand-darkred"
-          >
-            + Add Expense
-          </button>
         </>
       )}
 
@@ -295,7 +344,7 @@ export default function CashbookTab({ userId }: { userId: string }) {
           userId={userId}
           mode={modal.expenseMode ? "expense" : "cash"}
           initialType={modal.initialType}
-          onClose={() => setModal({ kind: "none" })}
+          onClose={closeModal}
           onSaved={reload}
         />
       )}
@@ -304,7 +353,7 @@ export default function CashbookTab({ userId }: { userId: string }) {
           userId={userId}
           mode={modal.entry.is_expense ? "expense" : "cash"}
           existing={modal.entry}
-          onClose={() => setModal({ kind: "none" })}
+          onClose={closeModal}
           onSaved={reload}
           onDelete={() => {
             setPendingDelete(modal.entry);

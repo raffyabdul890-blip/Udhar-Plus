@@ -2,49 +2,48 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import SearchBar from "@/components/dashboard/SearchBar";
-import ModuleSwitcher, { type DashboardModule } from "@/components/dashboard/ModuleSwitcher";
 import KhataHeaderStats from "@/components/dashboard/KhataHeaderStats";
 import CustomerList from "@/components/customers/CustomerList";
 import AddCustomerModal, { type PostAddAction } from "@/components/customers/AddCustomerModal";
+import PickCustomerModal from "@/components/customers/PickCustomerModal";
 import CustomerTransactionModal, {
   type EntryType,
 } from "@/components/customers/CustomerTransactionModal";
 import WhatsAppReminderModal from "@/components/customers/WhatsAppReminderModal";
-import BankList from "@/components/bank/BankList";
-import AddBankAccountModal from "@/components/bank/AddBankAccountModal";
-import BankTransactionModal from "@/components/bank/BankTransactionModal";
-import {
-  getBankAccounts,
-  getCustomers,
-  type LocalBankAccount,
-  type LocalCustomer,
-} from "@/lib/db/offlineStorage";
+import Button from "@/components/ui/Button";
+import { getCustomers, type LocalCustomer } from "@/lib/db/offlineStorage";
 
 type ActiveModal =
   | { kind: "none" }
-  | { kind: "add-customer" }
-  | { kind: "customer-txn"; customerId: string; initialEntryType?: EntryType }
-  | { kind: "whatsapp"; customerId: string }
-  | { kind: "add-bank" }
-  | { kind: "bank-txn"; accountId: string };
+  | { kind: "add-customer"; pickPurpose?: "give" | "receive" | "sale" }
+  | { kind: "pick-customer"; purpose: "give" | "receive" | "sale" }
+  | { kind: "customer-txn"; customerId: string; initialEntryType?: EntryType; initialShowItems?: boolean }
+  | { kind: "whatsapp"; customerId: string };
 
-export default function KhataTab({ userId, shopLabel }: { userId: string; shopLabel: string }) {
-  const [module, setModule] = useState<DashboardModule>("customers");
+export default function KhataTab({
+  userId,
+  shopLabel,
+  pendingAction,
+  onPendingActionHandled,
+}: {
+  userId: string;
+  shopLabel: string;
+  /** Set by a Dashboard quick action that needs a customer picker before it can proceed. */
+  pendingAction?: "give" | "receive" | "sale" | null;
+  onPendingActionHandled?: () => void;
+}) {
   const [search, setSearch] = useState("");
   const [customers, setCustomers] = useState<LocalCustomer[]>([]);
-  const [bankAccounts, setBankAccounts] = useState<LocalBankAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<ActiveModal>({ kind: "none" });
 
   // Deliberately doesn't load the transactions table here — customer "last
   // entry" comes from the denormalized LocalCustomer.last_transaction_at, and
   // each transaction modal fetches only its own entity's history on demand
-  // (see CustomerTransactionModal/BankTransactionModal), so this tab stays
-  // fast regardless of how much history the shop has accumulated.
+  // (see CustomerTransactionModal), so this tab stays fast regardless of how
+  // much history the shop has accumulated.
   const reload = useCallback(async () => {
-    const [customerRows, bankRows] = await Promise.all([getCustomers(userId), getBankAccounts(userId)]);
-    setCustomers(customerRows);
-    setBankAccounts(bankRows);
+    setCustomers(await getCustomers(userId));
     setLoading(false);
   }, [userId]);
 
@@ -55,11 +54,16 @@ export default function KhataTab({ userId, shopLabel }: { userId: string; shopLa
     reload();
   }, [reload]);
 
-  const query = search.trim().toLowerCase();
-  const isSearching = query.length > 0;
+  useEffect(() => {
+    if (pendingAction && modal.kind === "none") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setModal({ kind: "pick-customer", purpose: pendingAction });
+    }
+  }, [pendingAction, modal.kind]);
 
+  const query = search.trim().toLowerCase();
   const matchedCustomers = useMemo(() => {
-    if (!query) return [];
+    if (!query) return customers;
     return customers.filter(
       (c) =>
         c.name.toLowerCase().includes(query) ||
@@ -69,109 +73,74 @@ export default function KhataTab({ userId, shopLabel }: { userId: string; shopLa
     );
   }, [customers, query]);
 
-  const matchedBankAccounts = useMemo(() => {
-    if (!query) return [];
-    return bankAccounts.filter(
-      (b) =>
-        b.bank_name.toLowerCase().includes(query) ||
-        b.account_title.toLowerCase().includes(query) ||
-        b.account_number.toLowerCase().includes(query) ||
-        String(b.current_balance).includes(query)
-    );
-  }, [bankAccounts, query]);
-
   const openCustomer =
     modal.kind === "customer-txn" || modal.kind === "whatsapp"
       ? customers.find((c) => c.id === modal.customerId)
       : undefined;
-  const openAccount =
-    modal.kind === "bank-txn" ? bankAccounts.find((b) => b.id === modal.accountId) : undefined;
+
+  function closeModal() {
+    setModal({ kind: "none" });
+    onPendingActionHandled?.();
+  }
+
+  function openTxnForPurpose(customerId: string, purpose: "give" | "receive" | "sale") {
+    if (purpose === "sale") {
+      setModal({ kind: "customer-txn", customerId, initialEntryType: "DIYE", initialShowItems: true });
+    } else {
+      setModal({
+        kind: "customer-txn",
+        customerId,
+        initialEntryType: purpose === "give" ? "DIYE" : "MILAY",
+      });
+    }
+  }
 
   function handleCustomerAdded(customer: LocalCustomer, action: PostAddAction) {
     reload();
-    if (action === "give") {
+    const pickPurpose = modal.kind === "add-customer" ? modal.pickPurpose : undefined;
+    if (pickPurpose) {
+      openTxnForPurpose(customer.id, pickPurpose);
+    } else if (action === "give") {
       setModal({ kind: "customer-txn", customerId: customer.id, initialEntryType: "DIYE" });
     } else if (action === "receive") {
       setModal({ kind: "customer-txn", customerId: customer.id, initialEntryType: "MILAY" });
     } else if (action === "whatsapp") {
       setModal({ kind: "whatsapp", customerId: customer.id });
     } else {
-      setModal({ kind: "none" });
+      closeModal();
     }
   }
 
   return (
     <div className="flex flex-col gap-4">
-      {!isSearching && <KhataHeaderStats customers={customers} />}
+      {!query && <KhataHeaderStats customers={customers} />}
 
-      <SearchBar value={search} onChange={setSearch} />
-      {!isSearching && <ModuleSwitcher active={module} onChange={setModule} />}
+      <SearchBar value={search} onChange={setSearch} placeholder="Search customers, phone, amount…" />
 
-      {isSearching ? (
-        <div className="flex flex-col gap-6">
-          <section className="flex flex-col gap-3">
-            <h2 className="text-senior-base font-bold text-brand-white">Customers</h2>
-            {matchedCustomers.length === 0 ? (
-              <p className="text-senior-sm text-brand-white/60">No matching customers.</p>
-            ) : (
-              <CustomerList
-                customers={matchedCustomers}
-                loading={false}
-                onSelectCustomer={(customer) =>
-                  setModal({ kind: "customer-txn", customerId: customer.id })
-                }
-              />
-            )}
-          </section>
+      <CustomerList
+        customers={matchedCustomers}
+        loading={loading}
+        onSelectCustomer={(customer) => setModal({ kind: "customer-txn", customerId: customer.id })}
+      />
 
-          <section className="flex flex-col gap-3">
-            <h2 className="text-senior-base font-bold text-brand-white">Bank & Wallet Accounts</h2>
-            {matchedBankAccounts.length === 0 ? (
-              <p className="text-senior-sm text-brand-white/60">No matching accounts.</p>
-            ) : (
-              <BankList
-                accounts={matchedBankAccounts}
-                loading={false}
-                onSelectAccount={(account) =>
-                  setModal({ kind: "bank-txn", accountId: account.id })
-                }
-              />
-            )}
-          </section>
-        </div>
-      ) : module === "customers" ? (
-        <CustomerList
-          customers={customers}
-          loading={loading}
-          onSelectCustomer={(customer) =>
-            setModal({ kind: "customer-txn", customerId: customer.id })
-          }
-        />
-      ) : (
-        <BankList
-          accounts={bankAccounts}
-          loading={loading}
-          onSelectAccount={(account) => setModal({ kind: "bank-txn", accountId: account.id })}
-        />
-      )}
-
-      {!isSearching && (
-        <button
-          type="button"
-          onClick={() =>
-            setModal(module === "customers" ? { kind: "add-customer" } : { kind: "add-bank" })
-          }
-          className="min-h-tap min-w-tap rounded-xl bg-brand-red px-6 text-senior-base font-bold text-brand-white transition active:scale-[0.98] active:bg-brand-darkred"
-        >
-          {module === "customers" ? "+ Add Customer" : "+ Add Bank / Wallet Account"}
-        </button>
+      {!query && (
+        <Button icon="plus" fullWidth onClick={() => setModal({ kind: "add-customer" })}>
+          Add Customer
+        </Button>
       )}
 
       {modal.kind === "add-customer" && (
-        <AddCustomerModal
-          userId={userId}
-          onClose={() => setModal({ kind: "none" })}
-          onAdded={handleCustomerAdded}
+        <AddCustomerModal userId={userId} onClose={closeModal} onAdded={handleCustomerAdded} />
+      )}
+      {modal.kind === "pick-customer" && (
+        <PickCustomerModal
+          customers={customers}
+          title={
+            modal.purpose === "give" ? "Give Udhaar — Choose Customer" : modal.purpose === "receive" ? "Receive Payment — Choose Customer" : "New Sale — Choose Customer"
+          }
+          onClose={closeModal}
+          onPick={(customer) => openTxnForPurpose(customer.id, modal.purpose)}
+          onAddNew={() => setModal({ kind: "add-customer", pickPurpose: modal.purpose })}
         />
       )}
       {modal.kind === "customer-txn" && openCustomer && (
@@ -179,39 +148,17 @@ export default function KhataTab({ userId, shopLabel }: { userId: string; shopLa
           customer={openCustomer}
           shopLabel={shopLabel}
           initialEntryType={modal.initialEntryType}
-          onClose={() => setModal({ kind: "none" })}
+          initialShowItems={modal.initialShowItems}
+          onClose={closeModal}
           onSaved={reload}
           onDeleted={() => {
-            setModal({ kind: "none" });
+            closeModal();
             reload();
           }}
         />
       )}
       {modal.kind === "whatsapp" && openCustomer && (
-        <WhatsAppReminderModal
-          customer={openCustomer}
-          onClose={() => setModal({ kind: "none" })}
-          onSaved={reload}
-        />
-      )}
-      {modal.kind === "add-bank" && (
-        <AddBankAccountModal
-          userId={userId}
-          onClose={() => setModal({ kind: "none" })}
-          onAdded={reload}
-        />
-      )}
-      {modal.kind === "bank-txn" && openAccount && (
-        <BankTransactionModal
-          account={openAccount}
-          accounts={bankAccounts}
-          onClose={() => setModal({ kind: "none" })}
-          onSaved={reload}
-          onDeleted={() => {
-            setModal({ kind: "none" });
-            reload();
-          }}
-        />
+        <WhatsAppReminderModal customer={openCustomer} onClose={closeModal} onSaved={reload} />
       )}
     </div>
   );

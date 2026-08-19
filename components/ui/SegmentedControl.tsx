@@ -11,18 +11,19 @@ export default function SegmentedControl<T extends string>({
 }) {
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-senior-base font-medium text-brand-white">{label}</span>
-      <div className="flex gap-2">
+      <span className="text-senior-base font-medium text-ink">{label}</span>
+      <div role="tablist" aria-label={label} className="flex gap-1 rounded-xl bg-surface-alt p-1">
         {options.map((option) => {
           const active = option.value === value;
           return (
             <button
               key={option.value}
               type="button"
+              role="tab"
+              aria-selected={active}
               onClick={() => onChange(option.value)}
-              aria-pressed={active}
-              className={`min-h-tap flex-1 rounded-xl px-3 text-senior-sm font-bold transition ${
-                active ? "bg-brand-red text-brand-white" : "bg-brand-charcoal text-brand-white/80"
+              className={`min-h-tap flex-1 rounded-lg px-3 text-senior-sm font-bold transition-all duration-150 ${
+                active ? "bg-surface text-primary shadow-card" : "text-ink-secondary"
               }`}
             >
               {option.label}

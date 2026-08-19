@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import Modal from "@/components/ui/Modal";
 import TextField from "@/components/ui/TextField";
+import Button from "@/components/ui/Button";
 import { updateCustomer, type LocalCustomer } from "@/lib/db/offlineStorage";
 import {
   buildReminderMessage,
@@ -67,7 +68,7 @@ export default function WhatsAppReminderModal({
         />
 
         <div className="flex flex-col gap-2">
-          <label htmlFor="whatsapp-message" className="text-senior-base font-medium text-brand-white">
+          <label htmlFor="whatsapp-message" className="text-senior-base font-medium text-ink">
             Message (editable)
           </label>
           <textarea
@@ -75,25 +76,19 @@ export default function WhatsAppReminderModal({
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             rows={6}
-            className="min-h-tap rounded-xl border border-brand-charcoal bg-brand-black/40 p-4 text-senior-sm text-brand-white/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
+            className="min-h-tap w-full rounded-xl border border-border bg-surface-alt p-4 text-senior-sm text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           />
         </div>
 
         {error && (
-          <p
-            role="alert"
-            className="rounded-xl border border-brand-red bg-brand-charcoal px-4 py-3 text-senior-sm font-medium text-brand-white"
-          >
+          <p role="alert" className="rounded-xl border border-danger/30 bg-danger-light px-4 py-3 text-senior-sm font-medium text-danger-dark">
             {error}
           </p>
         )}
 
-        <button
-          type="submit"
-          className="min-h-tap min-w-tap rounded-xl bg-brand-red px-6 text-senior-base font-bold text-brand-white transition active:scale-[0.98] active:bg-brand-darkred"
-        >
+        <Button type="submit" icon="whatsapp" fullWidth>
           Open WhatsApp
-        </button>
+        </Button>
       </form>
     </Modal>
   );

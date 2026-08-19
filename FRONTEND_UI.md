@@ -4,31 +4,42 @@ Audience note: primary users skew older and may have reduced vision, dexterity, 
 familiarity. Every rule below exists to reduce misreads and mis-taps. When in doubt, choose the larger,
 higher-contrast, more forgiving option.
 
+Visual direction: light, clean, professional — modern Pakistani shopkeeper/business app, not a
+consumer-flashy or dark "fintech" theme. Purple is the brand/navigation color; green and red/orange are
+reserved for financial meaning (money in vs. money out), used carefully rather than saturating the whole UI.
+
 ## 1. Color System
 
 | Token | Hex | Role |
 |---|---|---|
-| `brand-red` | `#DA0000` | Primary actions (buttons, "Give Udhar" CTA), active states, brand accent |
-| `brand-black` | `#000000` | Main app background (dark mode by default) |
-| `brand-white` | `#FFFFFF` | High-contrast text/icons on dark surfaces |
-| `brand-charcoal` | `#574D4C` | Card backgrounds, dividers, input borders, disabled states |
-| `brand-darkred` | `#830F10` | Pressed/hover state for red actions, AI/insight highlights, danger emphasis |
+| `canvas` | `#F7F7F8` | App background |
+| `surface` | `#FFFFFF` | Card / modal background |
+| `surface-alt` | `#F3F4F6` | Secondary surface, hover/pressed backgrounds, stat-card fills |
+| `surface-dim` | `#EDEDF0` | Skeleton/shimmer base |
+| `border` | `#E5E7EB` | Default hairline border |
+| `border-strong` | `#D1D5DB` | Stronger border, rarely needed |
+| `ink` | `#171717` | Primary text |
+| `ink-secondary` | `#6B7280` | Secondary text |
+| `ink-tertiary` | `#9CA3AF` | Placeholder / disabled / least-important text |
+| `primary` / `primary-dark` / `primary-light` | `#6D4AFF` / `#5B3AE0` / `#F1EEFF` | Brand purple — navigation, links, secondary actions, neutral-but-important CTAs |
+| `success` / `success-dark` / `success-light` | `#16A34A` / `#15803D` / `#DCFCE7` | Positive financial actions: Receive Payment, Cash In, Payable |
+| `danger` / `danger-dark` / `danger-light` | `#DC2626` / `#B91C1C` / `#FEE2E2` | **Destructive actions only** (delete customer/item/entry) — soft-tinted, not a heavy fill |
+| `warning` / `warning-light` | `#D97706` / `#FEF3C7` | Legitimate "negative" financial actions: Give Udhaar, Cash Out, low-stock badges |
 
 ### Usage rules
-- Background is **always** `brand-black`. Never use pure grays outside `brand-charcoal`.
-- Body text is `brand-white` at full opacity — do not use low-opacity white for primary text (fails
-  contrast for low-vision users). Opacity reduction is only allowed for placeholder/hint text, and even
-  then must stay ≥ `70%` white.
-- `brand-red` is reserved for the single primary action per screen (e.g., "Give Udhar", "Save"). Do not use
-  it for more than one competing CTA on the same view.
-- `brand-darkred` is the pressed/active variant of `brand-red` (button `:active` state) and is also used for
-  AI-generated insight callouts (e.g., "Udhar Plus AI" summary cards) so users learn to associate it with
-  system-generated content.
-- `brand-charcoal` cards must always sit on `brand-black` background with a `1px` `brand-charcoal`-derived
-  lighter border (e.g., `rgba(255,255,255,0.08)`) so card edges remain visible without adding a new color.
-- Minimum contrast ratio: **4.5:1** for body text, **3:1** for large text (≥ 24px) and icons — verify any
-  new color combination against WCAG AA before shipping. White-on-black and white-on-charcoal both pass
-  comfortably; red-on-black passes for large text/buttons only, never for small body copy.
+- Background is **always** `canvas`; cards/modals sit on `surface`. Never reintroduce the old dark
+  `brand-black`/`brand-charcoal` tokens — they were fully retired in the light-theme rebuild.
+- Body text is `ink` at full opacity. Secondary/meta text uses `ink-secondary`; only placeholders and the
+  least important labels use `ink-tertiary`.
+- **Red/orange is used carefully, never as a page-wide wash.** `danger` (soft, `danger-light` background) is
+  reserved for destructive delete/remove confirmations. `warning` (solid fill) is the CTA color for
+  legitimate outflow actions — Give Udhaar's "Save Udhaar" button, Cash Out, expenses — coding them as
+  "negative" without turning the whole screen red.
+- `success` (solid fill) is the CTA color for Receive Payment / Cash In / any inflow action.
+- `primary` (purple) is the default brand color: navigation, active states, neutral primary buttons, links,
+  and badges/backgrounds that aren't specifically financial-positive or -negative.
+- Minimum contrast ratio: **4.5:1** for body text, **3:1** for large text (≥ 24px) and icons — verified for
+  every token pair above against `surface`/`canvas` before shipping.
 
 ## 2. Typography
 
@@ -39,97 +50,90 @@ Elderly users need larger-than-default type and generous spacing. Rules:
 - **Minimum body text size: 16px effective / `text-base` and up.** Never use `text-xs` for content the user
   must read to complete a task (balances, names, amounts). `text-xs`/`text-sm` are reserved for legal
   footers and non-critical metadata only.
-- **Financial figures (balances, amounts) are always the largest element on screen** — use `text-3xl` /
-  `text-4xl` and `font-bold` for the current balance number.
+- **Financial figures (balances, amounts) are always the largest element on screen** — use `text-3xl` and
+  `font-bold` for the current balance number. Prefer the shared `<Amount>` component (see §8) over a raw
+  number so figures get the count-up/pop treatment automatically.
 - **Line height**: minimum `leading-relaxed` (1.625) for paragraphs; headings can use `leading-snug`.
-- **Font weight**: body copy `font-medium` minimum (400-weight thin text is hard to read on dark
-  backgrounds at distance). Headings `font-bold`.
-- **Avoid long strings of uppercase text** — uppercase is fine for short labels/badges (≤ 2 words) but
-  never for sentences; it slows reading comprehension for aging eyes.
-- **Numerals**: always use tabular/monospaced number rendering for amounts (`font-variant-numeric:
-  tabular-nums`) so digits don't jitter when balances update.
-- Font: system-optimized via `next/font` (self-hosted, no external network requests). Default: Inter,
-  which has excellent numeral and letter distinction at large sizes. Swap for `next/font/local` if a
-  custom brand font is supplied later.
+- **Font weight**: body copy `font-medium` minimum. Headings `font-bold`.
+- **Avoid long strings of uppercase text** — uppercase is fine for short labels/badges (≤ 2 words, e.g.
+  section headers in More) but never for sentences.
+- **Numerals**: always tabular/monospaced (`font-variant-numeric: tabular-nums`) so digits don't jitter.
+- Font: `next/font` self-hosted Inter — excellent numeral and letter distinction at large sizes.
 
 ## 3. Spacing & Touch Targets
 
-- **Minimum tap target: 48×48px** (WCAG 2.5.5 AAA, and the safer bar given reduced dexterity) — applies to
-  every button, icon button, checkbox, and list row.
+- **Minimum tap target: 48×48px** (`min-h-tap`/`min-w-tap` utilities) — applies to every button, icon
+  button, checkbox, and list row.
 - Minimum 8px gap between adjacent interactive elements to prevent accidental mis-taps.
-- Primary screen padding: `px-4` mobile / `px-6` tablet+, never edge-to-edge content.
-- Forms: one input focus per row, large labels above (not placeholder-only) inputs, generous `py-3`+ input
-  height.
+- Primary screen padding: `px-4` mobile / more breathing room tablet+, never edge-to-edge content.
+- Forms: one input focus per row, large labels above (not placeholder-only) inputs, `min-h-tap` input
+  height. Every native `<input>`/`<select>`/`<textarea>` outside a row-flex context must be `w-full` (and
+  any input placed in a `flex-1` row must also carry `min-w-0`) — form controls have a large content-based
+  minimum width by default and will silently force horizontal overflow inside a modal otherwise.
+- **Fewer, purposeful cards.** Don't wrap every section in its own card; group related content and let
+  plain spacing do the separating where a card doesn't add meaning.
 
-## 4. Buttons — States, Ripple & Glow
+## 4. Icons
+
+- One consistent hand-rolled SVG icon set (`components/icons/Icon.tsx`, ~40 icons, 24×24 stroke-based,
+  `currentColor`) — no icon library dependency, no emoji anywhere in the UI. Add new glyphs to this file
+  rather than mixing in a second icon source.
+- Icon-only buttons (edit, delete, close) must still carry an `aria-label`.
+
+## 5. Buttons
 
 Buttons are the highest-stakes UI element in a finance app for this audience — feedback must be immediate
-and unambiguous.
+and unambiguous. Always use the shared `<Button>` component (`components/ui/Button.tsx`) rather than a raw
+`<button>` so ripple, sizing, and loading states stay consistent.
+
+### Variants
+| Variant | Style | Use for |
+|---|---|---|
+| `primary` | Solid `primary` purple | Default/neutral primary actions |
+| `success` | Solid `success` green | Receive Payment, Cash In, any inflow save |
+| `warning` | Solid `warning` orange | Give Udhaar, Cash Out, expense save — "negative" but routine actions |
+| `danger` | Soft `danger-light` fill, `danger` text | Destructive delete/remove only |
+| `secondary` | Soft `primary-light` fill, `primary` text | Secondary actions (Add Items, Change photo) |
+| `ghost` | Transparent, `ink-secondary` text | Tertiary/cancel actions |
 
 ### States
-| State | Style |
-|---|---|
-| Default (primary) | `bg-brand-red text-brand-white`, `rounded-xl`, `min-h-[48px]` |
-| Hover (pointer devices) | Slight lift: `brightness-110` |
-| Active/Pressed | `bg-brand-darkred` + ripple animation fires + `scale-[0.98]` |
-| Disabled | `bg-brand-charcoal text-brand-white/50`, no ripple/glow, `cursor-not-allowed` |
-| Focus (keyboard) | `outline outline-2 outline-offset-2 outline-brand-white` — never remove focus outlines |
+- Active/Pressed: `scale-[0.98]` + a variant-tinted ripple spawned from the press point, `500ms ease-out`,
+  respects `prefers-reduced-motion` (skipped, no JS work needed since it's a CSS animation).
+- Disabled: `surface-alt` background, `ink-tertiary` text, no ripple.
+- Loading: spinner + "Saving…" replaces label; button stays disabled.
+- Focus (keyboard): `outline outline-2 outline-offset-2 outline-primary` — never remove focus outlines.
+- No glow effect — retired with the dark theme. Soft `shadow-card`/`shadow-elevated` (see `tailwind.config.ts`)
+  is the only elevation cue; never a colored glowing box-shadow.
 
-### Ripple spec
-- On press (`pointerdown`), spawn a circular `brand-white/30` overlay at the touch point, scale from `0`
-  to cover the button's largest dimension, fade out.
-- Duration: **450ms**, easing: `ease-out`.
-- Implementation: a `useRipple` hook attaching a `<span>` per press; respects `prefers-reduced-motion` (see
-  §6) by skipping the scale animation and using a simple opacity flash instead.
-- Tailwind hook: `animate-ripple` (keyframe defined in `tailwind.config.ts`) — scales `0 → 4` while fading
-  opacity `0.4 → 0`.
+## 6. Skeleton Screens
 
-### Glow spec
-- Used to draw attention to the single primary action on a screen (e.g., "Give Udhar" on an empty
-  dashboard) and for AI-highlighted content using `brand-darkred`.
-- `box-shadow` pulse: `0 0 0px` → `0 0 16px` of the button's own color at 60% opacity → back to `0 0 0px`.
-- Duration: **2.2s**, `ease-in-out`, infinite loop, only while the button is idle (glow stops once pressed
-  or once the user completes the action it's highlighting).
-- Tailwind hook: `animate-glow` (keyframe `glow` defined in `tailwind.config.ts`).
-- Never combine glow on more than one element at a time — competing glows defeat the purpose.
+- Skeleton shapes must match the real component's exact dimensions and border radius.
+- Shimmer sweep: `surface-dim` → `canvas` → `surface-dim`, `2s linear infinite`
+  (`bg-shimmer-gradient bg-shimmer-size animate-shimmer`).
+- Always include `role="status"` and an `aria-label` on the skeleton container.
+- Show skeletons for a minimum of ~300ms even on fast connections; replace with real content the moment
+  data resolves.
 
-## 5. Skeleton Screens
+## 7. Motion & Accessibility
 
-Skeletons are used instead of spinners for any content that has a predictable shape (customer cards,
-balance cards, lists) — they reduce perceived load time and prevent layout shift, which is especially
-important for users who may tap prematurely while content is still loading.
-
-### Pattern rules
-- Skeleton shapes must match the real component's exact dimensions and border radius — no generic gray
-  boxes.
-- Shimmer sweep: a soft gradient band moves left → right across `brand-charcoal` blocks.
-  - Gradient stops: `brand-charcoal` → lightened charcoal (`#6b6060`) → `brand-charcoal`.
-  - Duration: **2s linear infinite**.
-  - Tailwind hooks: `bg-shimmer-gradient bg-shimmer-size animate-shimmer` (defined in
-    `tailwind.config.ts`).
-- Always include `role="status"` and a visually-hidden `aria-label="Loading…"` on the skeleton container so
-  screen readers announce loading state once, not per shimmering block.
-- Use skeletons for: dashboard balance card, customer list rows, customer profile header, reports charts.
-- Use a spinner instead only for full-screen transitions with no predictable layout (e.g., initial app
-  boot before any shell renders).
-- Show skeletons for a minimum of ~300ms even on fast connections (avoid a jarring flash-then-replace);
-  never show them for longer than necessary — replace with real content the moment data resolves.
-
-## 6. Motion & Accessibility
-
-- Respect `prefers-reduced-motion: reduce` globally: ripple becomes an opacity flash, glow pulse becomes a
-  static highlight ring, shimmer becomes a static two-tone block (no sweep).
+- Respect `prefers-reduced-motion: reduce` globally (enforced in `globals.css`) — all animation/transition
+  durations collapse to ~0.
+- Entrance animations: `animate-fade-in-up` (list rows, page content), `animate-scale-in` (desktop modals),
+  `animate-slide-up-sheet` (mobile modals), `animate-toast-in` (toasts) — all 150–220ms, defined in
+  `tailwind.config.ts`.
+- `<Amount>` (`components/ui/Amount.tsx`) gives financial totals a brief count-up + `animate-value-pop` pulse
+  whenever their value changes — use it instead of printing a raw number for any balance/total.
 - No auto-playing carousels or content that moves without user action.
-- All interactive elements are reachable and operable via keyboard/switch-access, with visible focus
-  states (§4).
-- Icons always paired with a text label for primary actions — icon-only buttons only for well-established
-  patterns (back arrow, close "×") and must still carry an `aria-label`.
+- Icons paired with a text label for primary actions — icon-only buttons only for established patterns
+  (back arrow, close "×", edit/delete in a list row) and must carry an `aria-label`.
 
-## 7. Component Checklist (new component definition of done)
+## 8. Component Checklist (new component definition of done)
 
 - [ ] Meets 48×48px minimum tap target (if interactive)
 - [ ] Passes 4.5:1 contrast for text, 3:1 for large text/icons
-- [ ] Uses only brand tokens from `tailwind.config.ts` (no ad-hoc hex values)
-- [ ] Has a skeleton or loading state if it renders async data
+- [ ] Uses only tokens from `tailwind.config.ts` (no ad-hoc hex values, no `brand-*` classes)
+- [ ] Uses the shared `Icon`/`Button`/`Amount`/`Badge`/`TextField`/`Modal` primitives rather than one-off markup
+- [ ] Has a skeleton or `EmptyState` for async/empty data
 - [ ] Respects `prefers-reduced-motion`
 - [ ] Keyboard-operable with visible focus ring
+- [ ] Any native `<input>`/`<select>`/`<textarea>` is `w-full` (or `min-w-0` if it's a flex-1 row item)

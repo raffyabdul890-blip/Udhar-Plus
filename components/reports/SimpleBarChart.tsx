@@ -11,7 +11,7 @@ export default function SimpleBarChart({
   const max = Math.max(1, ...bars.map((b) => Math.abs(b.value)));
 
   if (bars.every((b) => b.value === 0)) {
-    return <p className="text-senior-sm text-brand-white/60">Not enough data yet.</p>;
+    return <p className="text-senior-sm text-ink-secondary">Not enough data yet.</p>;
   }
 
   return (
@@ -21,14 +21,12 @@ export default function SimpleBarChart({
         return (
           <div key={bar.label} className="flex flex-col gap-1">
             <div className="flex items-center justify-between gap-2 text-senior-sm">
-              <span className="truncate font-medium text-brand-white/90">{bar.label}</span>
-              <span className="shrink-0 font-bold text-brand-white">
-                {bar.value.toLocaleString("en-PK")}
-              </span>
+              <span className="truncate font-medium text-ink-secondary">{bar.label}</span>
+              <span className="shrink-0 font-bold text-ink">{bar.value.toLocaleString("en-PK")}</span>
             </div>
-            <div className="h-3 w-full overflow-hidden rounded-full bg-brand-black/40">
+            <div className="h-2.5 w-full overflow-hidden rounded-full bg-surface-alt">
               <div
-                className={`h-full rounded-full ${bar.colorClassName ?? "bg-brand-red"}`}
+                className={`h-full rounded-full transition-all duration-500 ${bar.colorClassName ?? "bg-primary"}`}
                 style={{ width: `${widthPct}%` }}
               />
             </div>

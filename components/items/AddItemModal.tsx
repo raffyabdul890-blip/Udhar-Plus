@@ -3,6 +3,8 @@
 import { useState, type FormEvent } from "react";
 import Modal from "@/components/ui/Modal";
 import TextField from "@/components/ui/TextField";
+import Button from "@/components/ui/Button";
+import { useToast } from "@/components/ui/ToastProvider";
 import { addItem, updateItem, type LocalItem } from "@/lib/db/offlineStorage";
 
 export default function AddItemModal({
@@ -18,6 +20,7 @@ export default function AddItemModal({
   onSaved: () => void;
   onDelete?: () => void;
 }) {
+  const showToast = useToast();
   const [name, setName] = useState(existing?.name ?? "");
   const [stock, setStock] = useState(existing ? String(existing.stock_quantity) : "0");
   const [purchasePrice, setPurchasePrice] = useState(
@@ -57,6 +60,7 @@ export default function AddItemModal({
     }
 
     setSaving(false);
+    showToast(existing ? "Item updated" : "Item added");
     onSaved();
     onClose();
   }
@@ -118,30 +122,19 @@ export default function AddItemModal({
         />
 
         {error && (
-          <p
-            role="alert"
-            className="rounded-xl border border-brand-red bg-brand-charcoal px-4 py-3 text-senior-sm font-medium text-brand-white"
-          >
+          <p role="alert" className="rounded-xl border border-danger/30 bg-danger-light px-4 py-3 text-senior-sm font-medium text-danger-dark">
             {error}
           </p>
         )}
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="min-h-tap min-w-tap rounded-xl bg-brand-red px-6 text-senior-base font-bold text-brand-white transition active:scale-[0.98] active:bg-brand-darkred disabled:bg-brand-charcoal disabled:text-brand-white/50"
-        >
-          {saving ? "Saving…" : "Save item"}
-        </button>
+        <Button type="submit" loading={saving} fullWidth>
+          Save Item
+        </Button>
 
         {onDelete && (
-          <button
-            type="button"
-            onClick={onDelete}
-            className="min-h-tap min-w-tap rounded-xl border border-brand-red px-6 text-senior-base font-bold text-brand-red transition active:scale-[0.98]"
-          >
+          <Button variant="danger" fullWidth onClick={onDelete}>
             Delete item
-          </button>
+          </Button>
         )}
       </form>
     </Modal>

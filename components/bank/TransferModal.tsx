@@ -3,6 +3,9 @@
 import { useState, type FormEvent } from "react";
 import Modal from "@/components/ui/Modal";
 import TextField from "@/components/ui/TextField";
+import Button from "@/components/ui/Button";
+import { useToast } from "@/components/ui/ToastProvider";
+import { selectClassName } from "@/components/ui/TextField";
 import { recordTransfer } from "@/lib/db/ledger";
 import { fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/utils/datetime";
 import type { LocalBankAccount } from "@/lib/db/offlineStorage";
@@ -22,6 +25,7 @@ export default function TransferModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const showToast = useToast();
   const destinations = accounts.filter((a) => a.id !== fromAccount.id);
   const [toAccountId, setToAccountId] = useState(destinations[0]?.id ?? "");
   const [amount, setAmount] = useState("");
@@ -54,6 +58,7 @@ export default function TransferModal({
       fromDatetimeLocalValue(dateValue)
     );
     setSaving(false);
+    showToast("Transfer complete");
     onSaved();
     onClose();
   }
@@ -62,14 +67,14 @@ export default function TransferModal({
     <Modal title={`Transfer from ${fromAccount.account_title}`} onClose={onClose}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
-          <label htmlFor="transfer-to" className="text-senior-base font-medium text-brand-white">
+          <label htmlFor="transfer-to" className="text-senior-base font-medium text-ink">
             To account
           </label>
           <select
             id="transfer-to"
             value={toAccountId}
             onChange={(e) => setToAccountId(e.target.value)}
-            className="min-h-tap rounded-xl border border-brand-charcoal bg-brand-black px-4 text-senior-base text-brand-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
+            className={selectClassName}
           >
             {destinations.map((a) => (
               <option key={a.id} value={a.id}>
@@ -109,21 +114,14 @@ export default function TransferModal({
         />
 
         {error && (
-          <p
-            role="alert"
-            className="rounded-xl border border-brand-red bg-brand-charcoal px-4 py-3 text-senior-sm font-medium text-brand-white"
-          >
+          <p role="alert" className="rounded-xl border border-danger/30 bg-danger-light px-4 py-3 text-senior-sm font-medium text-danger-dark">
             {error}
           </p>
         )}
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="min-h-tap min-w-tap rounded-xl bg-brand-red px-6 text-senior-base font-bold text-brand-white transition active:scale-[0.98] active:bg-brand-darkred disabled:bg-brand-charcoal disabled:text-brand-white/50"
-        >
-          {saving ? "Transferring…" : "Transfer"}
-        </button>
+        <Button type="submit" icon="transfer" loading={saving} fullWidth>
+          Transfer
+        </Button>
       </form>
     </Modal>
   );
