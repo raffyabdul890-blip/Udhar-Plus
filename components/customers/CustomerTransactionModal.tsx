@@ -6,7 +6,7 @@ import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import TextField from "@/components/ui/TextField";
 import SegmentedControl from "@/components/ui/SegmentedControl";
 import WhatsAppReminderModal from "@/components/customers/WhatsAppReminderModal";
-import PrintableLedger from "@/components/customers/PrintableLedger";
+import ExportSummaryModal from "@/components/customers/ExportSummaryModal";
 import ItemizedEntryFields, {
   computeItemsTotal,
 } from "@/components/customers/ItemizedEntryFields";
@@ -66,6 +66,7 @@ export default function CustomerTransactionModal({
   const [error, setError] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const [showReminder, setShowReminder] = useState(false);
+  const [showExportSummary, setShowExportSummary] = useState(false);
 
   const history = [...transactions].sort((a, b) => compareTransactionDates(b, a));
 
@@ -179,7 +180,6 @@ export default function CustomerTransactionModal({
   }
 
   return (
-    <>
     <Modal title={customer.name} onClose={onClose}>
       <div className="flex flex-col gap-3">
         <p className="text-senior-sm text-brand-white/70">
@@ -200,14 +200,14 @@ export default function CustomerTransactionModal({
             onClick={() => setShowReminder(true)}
             className="flex min-h-tap flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-brand-charcoal px-3 text-senior-sm font-bold text-brand-white transition active:scale-[0.98]"
           >
-            💬 Send Reminder
+            💬 Remind on WhatsApp
           </button>
           <button
             type="button"
-            onClick={() => window.print()}
+            onClick={() => setShowExportSummary(true)}
             className="flex min-h-tap flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-brand-charcoal px-3 text-senior-sm font-bold text-brand-white transition active:scale-[0.98]"
           >
-            🖨️ Export / Print
+            📄 Share / Export Summary
           </button>
         </div>
       </div>
@@ -341,8 +341,13 @@ export default function CustomerTransactionModal({
               >
                 {txn.photo_id && <EntryPhotoThumbnail photoId={txn.photo_id} />}
                 <div className="flex flex-1 flex-col overflow-hidden">
-                  <span className="truncate text-senior-sm font-medium text-brand-white">
-                    {txn.type === "OUT" ? "Diye" : "Milay"} · {txn.amount.toLocaleString("en-PK")}
+                  <span
+                    className={`truncate text-senior-sm font-bold ${
+                      txn.type === "OUT" ? "text-brand-red" : "text-brand-green"
+                    }`}
+                  >
+                    {txn.type === "OUT" ? "Udhar (Diye)" : "Jama (Milay)"} ·{" "}
+                    {txn.amount.toLocaleString("en-PK")}
                   </span>
                   <span className="truncate text-senior-xs text-brand-white/60">
                     {formatDateTime(txn.transaction_date)}
@@ -405,8 +410,15 @@ export default function CustomerTransactionModal({
           onSaved={onSaved}
         />
       )}
+
+      {showExportSummary && (
+        <ExportSummaryModal
+          customer={customer}
+          shopLabel={shopLabel}
+          transactions={transactions}
+          onClose={() => setShowExportSummary(false)}
+        />
+      )}
     </Modal>
-    <PrintableLedger customer={customer} transactions={transactions} shopLabel={shopLabel} />
-    </>
   );
 }

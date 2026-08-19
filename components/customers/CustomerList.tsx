@@ -73,7 +73,11 @@ export default function CustomerList({
 
               <span
                 className={`shrink-0 text-senior-lg font-bold ${
-                  customer.current_balance !== 0 ? "text-brand-red" : "text-brand-white"
+                  customer.current_balance > 0
+                    ? "text-brand-red"
+                    : customer.current_balance < 0
+                      ? "text-brand-green"
+                      : "text-brand-white"
                 }`}
               >
                 {customer.current_balance.toLocaleString("en-PK")}

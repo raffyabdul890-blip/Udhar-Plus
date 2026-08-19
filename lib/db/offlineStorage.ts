@@ -59,7 +59,56 @@ export interface LocalPhoto {
   created_at: string;
 }
 
-export type LocalEntityTable = "customers" | "bankAccounts" | "transactions";
+/** A stocked product — Items/Inventory tab. */
+export interface LocalItem {
+  id: string;
+  user_id: string;
+  name: string;
+  stock_quantity: number;
+  purchase_price?: number;
+  selling_price?: number;
+  /** Below this, the Items tab flags the product as low stock. Defaults to 5 if unset. */
+  low_stock_threshold?: number;
+  created_at: string;
+  updated_at: string;
+  synced: boolean;
+}
+
+/** A daily cash IN/OUT entry — Cashbook tab. Not tied to a customer or bank account. */
+export interface CashbookEntry {
+  id: string;
+  user_id: string;
+  type: "IN" | "OUT";
+  amount: number;
+  category: string;
+  note?: string;
+  entry_date: string;
+  created_at: string;
+  synced: boolean;
+}
+
+/** One row per user — business profile shown on the Customers header and More tab. */
+export interface LocalBusinessSettings {
+  id: string;
+  user_id: string;
+  business_name?: string;
+  phone?: string;
+  address?: string;
+  category?: string;
+  /** References `photos.id`. */
+  logo_photo_id?: string;
+  language: "en" | "ur";
+  created_at: string;
+  updated_at: string;
+  synced: boolean;
+}
+
+export type LocalEntityTable =
+  | "customers"
+  | "bankAccounts"
+  | "transactions"
+  | "items"
+  | "cashbookEntries";
 
 export interface PendingDelete {
   id: string;
@@ -74,6 +123,10 @@ class UdharPlusDB extends Dexie {
   transactions!: Table<LocalTransaction, string>;
   pendingDeletes!: Table<PendingDelete, string>;
   photos!: Table<LocalPhoto, string>;
+
+  items!: Table<LocalItem, string>;
+  cashbookEntries!: Table<CashbookEntry, string>;
+  businessSettings!: Table<LocalBusinessSettings, string>;
 
   constructor() {
     super("UdharPlusDB");
@@ -91,6 +144,16 @@ class UdharPlusDB extends Dexie {
       transactions: "id, user_id, [entity_type+entity_id]",
       pendingDeletes: "id, table, user_id",
       photos: "id, user_id",
+    });
+    this.version(3).stores({
+      customers: "id, user_id, updated_at",
+      bankAccounts: "id, user_id, updated_at",
+      transactions: "id, user_id, [entity_type+entity_id]",
+      pendingDeletes: "id, table, user_id",
+      photos: "id, user_id",
+      items: "id, user_id, updated_at",
+      cashbookEntries: "id, user_id, entry_date",
+      businessSettings: "id, user_id",
     });
   }
 }
@@ -296,6 +359,114 @@ export async function deletePhoto(id: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Items / Inventory
+// ---------------------------------------------------------------------------
+
+export async function addItem(
+  input: Omit<LocalItem, "id" | "created_at" | "updated_at" | "synced">
+): Promise<LocalItem> {
+  const record: LocalItem = {
+    ...input,
+    id: crypto.randomUUID(),
+    created_at: nowIso(),
+    updated_at: nowIso(),
+    synced: false,
+  };
+  await requireDb().items.put(record);
+  return record;
+}
+
+export async function updateItem(
+  id: string,
+  changes: Partial<Omit<LocalItem, "id" | "user_id" | "created_at">>
+): Promise<void> {
+  await requireDb().items.update(id, { ...changes, updated_at: nowIso(), synced: false });
+}
+
+export async function deleteItem(id: string, userId: string): Promise<void> {
+  await requireDb().transaction("rw", requireDb().items, requireDb().pendingDeletes, async () => {
+    await requireDb().items.delete(id);
+    await requireDb().pendingDeletes.put({
+      id,
+      table: "items",
+      user_id: userId,
+      deleted_at: nowIso(),
+    });
+  });
+}
+
+export async function getItems(userId: string): Promise<LocalItem[]> {
+  return requireDb().items.where("user_id").equals(userId).toArray();
+}
+
+// ---------------------------------------------------------------------------
+// Cashbook
+// ---------------------------------------------------------------------------
+
+export async function addCashbookEntry(
+  input: Omit<CashbookEntry, "id" | "created_at" | "synced">
+): Promise<CashbookEntry> {
+  const record: CashbookEntry = {
+    ...input,
+    id: crypto.randomUUID(),
+    created_at: nowIso(),
+    synced: false,
+  };
+  await requireDb().cashbookEntries.put(record);
+  return record;
+}
+
+export async function deleteCashbookEntry(id: string, userId: string): Promise<void> {
+  await requireDb().transaction(
+    "rw",
+    requireDb().cashbookEntries,
+    requireDb().pendingDeletes,
+    async () => {
+      await requireDb().cashbookEntries.delete(id);
+      await requireDb().pendingDeletes.put({
+        id,
+        table: "cashbookEntries",
+        user_id: userId,
+        deleted_at: nowIso(),
+      });
+    }
+  );
+}
+
+export async function getCashbookEntries(userId: string): Promise<CashbookEntry[]> {
+  return requireDb().cashbookEntries.where("user_id").equals(userId).toArray();
+}
+
+// ---------------------------------------------------------------------------
+// Business settings (one row per user)
+// ---------------------------------------------------------------------------
+
+export async function getBusinessSettings(
+  userId: string
+): Promise<LocalBusinessSettings | undefined> {
+  return requireDb().businessSettings.get(userId);
+}
+
+export async function saveBusinessSettings(
+  userId: string,
+  changes: Partial<Omit<LocalBusinessSettings, "id" | "user_id" | "created_at">>
+): Promise<LocalBusinessSettings> {
+  const existing = await requireDb().businessSettings.get(userId);
+  const record: LocalBusinessSettings = {
+    id: userId,
+    user_id: userId,
+    language: "en",
+    ...existing,
+    ...changes,
+    created_at: existing?.created_at ?? nowIso(),
+    updated_at: nowIso(),
+    synced: false,
+  };
+  await requireDb().businessSettings.put(record);
+  return record;
+}
+
+// ---------------------------------------------------------------------------
 // Sync helpers (consumed by lib/sync/syncEngine.ts)
 // ---------------------------------------------------------------------------
 
@@ -323,6 +494,29 @@ export async function getUnsyncedTransactions(userId: string): Promise<LocalTran
     .toArray();
 }
 
+export async function getUnsyncedItems(userId: string): Promise<LocalItem[]> {
+  return requireDb()
+    .items.where("user_id")
+    .equals(userId)
+    .filter((i) => !i.synced)
+    .toArray();
+}
+
+export async function getUnsyncedCashbookEntries(userId: string): Promise<CashbookEntry[]> {
+  return requireDb()
+    .cashbookEntries.where("user_id")
+    .equals(userId)
+    .filter((c) => !c.synced)
+    .toArray();
+}
+
+export async function getUnsyncedBusinessSettings(
+  userId: string
+): Promise<LocalBusinessSettings | undefined> {
+  const settings = await requireDb().businessSettings.get(userId);
+  return settings && !settings.synced ? settings : undefined;
+}
+
 export async function getPendingDeletes(): Promise<PendingDelete[]> {
   return requireDb().pendingDeletes.toArray();
 }
@@ -333,8 +527,12 @@ export async function clearPendingDelete(id: string): Promise<void> {
 
 export async function markSynced(table: LocalEntityTable, id: string): Promise<void> {
   await requireDb()[table].update(id, { synced: true } as Partial<
-    LocalCustomer | LocalBankAccount | LocalTransaction
+    LocalCustomer | LocalBankAccount | LocalTransaction | LocalItem | CashbookEntry
   >);
+}
+
+export async function markBusinessSettingsSynced(userId: string): Promise<void> {
+  await requireDb().businessSettings.update(userId, { synced: true });
 }
 
 export async function hydrateCustomers(records: LocalCustomer[]): Promise<void> {
@@ -349,14 +547,33 @@ export async function hydrateTransactions(records: LocalTransaction[]): Promise<
   await requireDb().transactions.bulkPut(records.map((r) => ({ ...r, synced: true })));
 }
 
+export async function hydrateItems(records: LocalItem[]): Promise<void> {
+  await requireDb().items.bulkPut(records.map((r) => ({ ...r, synced: true })));
+}
+
+export async function hydrateCashbookEntries(records: CashbookEntry[]): Promise<void> {
+  await requireDb().cashbookEntries.bulkPut(records.map((r) => ({ ...r, synced: true })));
+}
+
+export async function hydrateBusinessSettings(
+  record: LocalBusinessSettings | undefined
+): Promise<void> {
+  if (record) await requireDb().businessSettings.put({ ...record, synced: true });
+}
+
 export async function wipeLocalDatabase(): Promise<void> {
   await requireDb().transaction(
     "rw",
-    requireDb().customers,
-    requireDb().bankAccounts,
-    requireDb().transactions,
-    requireDb().pendingDeletes,
-    requireDb().photos,
+    [
+      requireDb().customers,
+      requireDb().bankAccounts,
+      requireDb().transactions,
+      requireDb().pendingDeletes,
+      requireDb().photos,
+      requireDb().items,
+      requireDb().cashbookEntries,
+      requireDb().businessSettings,
+    ],
     async () => {
       await Promise.all([
         requireDb().customers.clear(),
@@ -364,6 +581,9 @@ export async function wipeLocalDatabase(): Promise<void> {
         requireDb().transactions.clear(),
         requireDb().pendingDeletes.clear(),
         requireDb().photos.clear(),
+        requireDb().items.clear(),
+        requireDb().cashbookEntries.clear(),
+        requireDb().businessSettings.clear(),
       ]);
     }
   );

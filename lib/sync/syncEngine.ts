@@ -3,12 +3,19 @@ import {
   getUnsyncedCustomers,
   getUnsyncedBankAccounts,
   getUnsyncedTransactions,
+  getUnsyncedItems,
+  getUnsyncedCashbookEntries,
+  getUnsyncedBusinessSettings,
   getPendingDeletes,
   clearPendingDelete,
   markSynced,
+  markBusinessSettingsSynced,
   hydrateCustomers,
   hydrateBankAccounts,
   hydrateTransactions,
+  hydrateItems,
+  hydrateCashbookEntries,
+  hydrateBusinessSettings,
   type LocalEntityTable,
 } from "@/lib/db/offlineStorage";
 
@@ -16,6 +23,8 @@ const TABLE_TO_SUPABASE: Record<LocalEntityTable, string> = {
   customers: "customers",
   bankAccounts: "bank_accounts",
   transactions: "transactions",
+  items: "items",
+  cashbookEntries: "cashbook_entries",
 };
 
 const SYNC_INTERVAL_MS = 30_000;
@@ -44,11 +53,15 @@ export async function syncPendingRecords(userId: string): Promise<void> {
       if (!error) await clearPendingDelete(del.id);
     }
 
-    const [customers, bankAccounts, transactions] = await Promise.all([
-      getUnsyncedCustomers(userId),
-      getUnsyncedBankAccounts(userId),
-      getUnsyncedTransactions(userId),
-    ]);
+    const [customers, bankAccounts, transactions, items, cashbookEntries, businessSettings] =
+      await Promise.all([
+        getUnsyncedCustomers(userId),
+        getUnsyncedBankAccounts(userId),
+        getUnsyncedTransactions(userId),
+        getUnsyncedItems(userId),
+        getUnsyncedCashbookEntries(userId),
+        getUnsyncedBusinessSettings(userId),
+      ]);
 
     for (const customer of customers) {
       const { error } = await supabase.from("customers").upsert({
@@ -97,6 +110,49 @@ export async function syncPendingRecords(userId: string): Promise<void> {
       });
       if (!error) await markSynced("transactions", txn.id);
     }
+
+    for (const item of items) {
+      const { error } = await supabase.from("items").upsert({
+        id: item.id,
+        user_id: item.user_id,
+        name: item.name,
+        stock_quantity: item.stock_quantity,
+        purchase_price: item.purchase_price ?? null,
+        selling_price: item.selling_price ?? null,
+        low_stock_threshold: item.low_stock_threshold ?? null,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+      });
+      if (!error) await markSynced("items", item.id);
+    }
+
+    for (const entry of cashbookEntries) {
+      const { error } = await supabase.from("cashbook_entries").upsert({
+        id: entry.id,
+        user_id: entry.user_id,
+        type: entry.type,
+        amount: entry.amount,
+        category: entry.category,
+        note: entry.note ?? null,
+        entry_date: entry.entry_date,
+        created_at: entry.created_at,
+      });
+      if (!error) await markSynced("cashbookEntries", entry.id);
+    }
+
+    if (businessSettings) {
+      const { error } = await supabase.from("business_settings").upsert({
+        user_id: businessSettings.user_id,
+        business_name: businessSettings.business_name ?? null,
+        phone: businessSettings.phone ?? null,
+        address: businessSettings.address ?? null,
+        category: businessSettings.category ?? null,
+        language: businessSettings.language,
+        created_at: businessSettings.created_at,
+        updated_at: businessSettings.updated_at,
+      });
+      if (!error) await markBusinessSettingsSynced(userId);
+    }
   } finally {
     syncInFlight = false;
   }
@@ -109,15 +165,33 @@ export async function syncPendingRecords(userId: string): Promise<void> {
 export async function hydrateFromCloud(userId: string): Promise<void> {
   const supabase = createClient();
 
-  const [customersRes, bankAccountsRes, transactionsRes] = await Promise.all([
+  const [
+    customersRes,
+    bankAccountsRes,
+    transactionsRes,
+    itemsRes,
+    cashbookRes,
+    businessSettingsRes,
+  ] = await Promise.all([
     supabase.from("customers").select("*").eq("user_id", userId),
     supabase.from("bank_accounts").select("*").eq("user_id", userId),
     supabase.from("transactions").select("*").eq("user_id", userId),
+    supabase.from("items").select("*").eq("user_id", userId),
+    supabase.from("cashbook_entries").select("*").eq("user_id", userId),
+    supabase.from("business_settings").select("*").eq("user_id", userId).maybeSingle(),
   ]);
 
   if (customersRes.data) await hydrateCustomers(customersRes.data);
   if (bankAccountsRes.data) await hydrateBankAccounts(bankAccountsRes.data);
   if (transactionsRes.data) await hydrateTransactions(transactionsRes.data);
+  if (itemsRes.data) await hydrateItems(itemsRes.data);
+  if (cashbookRes.data) await hydrateCashbookEntries(cashbookRes.data);
+  if (businessSettingsRes.data) {
+    await hydrateBusinessSettings({
+      id: businessSettingsRes.data.user_id,
+      ...businessSettingsRes.data,
+    });
+  }
 }
 
 /**

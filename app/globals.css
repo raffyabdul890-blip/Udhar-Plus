@@ -28,34 +28,3 @@
     transition-duration: 0.01ms !important;
   }
 }
-
-/* Print one element (components/customers/PrintableLedger.tsx) and hide the
-   rest of the app — pairs with that component's own `hidden print:block`. */
-@media print {
-  /* The app's dark theme is a `body` background — hiding descendants with
-     `visibility` (below) leaves body's own background rendering behind them,
-     which would print as a solid black page. Force it white for print only. */
-  body {
-    background: #fff !important;
-  }
-
-  body * {
-    visibility: hidden;
-  }
-
-  .print-ledger,
-  .print-ledger * {
-    visibility: visible;
-  }
-
-  .print-ledger {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-  }
-
-  @page {
-    margin: 1.5cm;
-  }
-}

@@ -19,3 +19,15 @@ export function buildReminderMessage(customerName: string, balance: number): str
 export function buildWhatsAppUrl(formattedNumber: string, message: string): string {
   return `https://wa.me/${formattedNumber}?text=${encodeURIComponent(message)}`;
 }
+
+/** Full ledger summary (last few entries + net balance) for the Export Summary modal. */
+export function buildLedgerSummaryMessage(
+  shopLabel: string,
+  customerName: string,
+  balance: number,
+  recentLines: string[]
+): string {
+  const formattedBalance = balance.toLocaleString("en-PK");
+  const history = recentLines.length > 0 ? `\n\nRecent entries:\n${recentLines.join("\n")}` : "";
+  return `${shopLabel} — Ledger Summary for ${customerName}${history}\n\nNet Udhar Remaining: Rs. ${formattedBalance}\n\nThank you for your business!`;
+}

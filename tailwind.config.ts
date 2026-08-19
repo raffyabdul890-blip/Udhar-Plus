@@ -21,11 +21,13 @@ const config: Config = {
       },
       colors: {
         brand: {
-          red: "#DA0000", // Primary actions / CTAs
+          red: "#DA0000", // Primary actions / CTAs; also "Udhar" (given) coding
           black: "#000000", // Main app background
           white: "#FFFFFF", // High-contrast text
           charcoal: "#574D4C", // Card backgrounds & borders
           darkred: "#830F10", // Pressed state / AI highlights
+          green: "#22C55E", // "Jama" (received) coding, receivable/payable totals — 9.2:1 on black
+          darkgreen: "#15803D", // Pressed state for green actions
         },
       },
       spacing: {
