@@ -1,6 +1,6 @@
 export type BottomTabId = "khata" | "cashbook" | "items" | "reports" | "more";
 
-const TABS: { id: BottomTabId; icon: string; label: string; labelUrdu: string }[] = [
+export const DASHBOARD_TABS: { id: BottomTabId; icon: string; label: string; labelUrdu: string }[] = [
   { id: "khata", icon: "🧾", label: "Customers", labelUrdu: "کھاتہ" },
   { id: "cashbook", icon: "💵", label: "Cashbook", labelUrdu: "کیش بک" },
   { id: "items", icon: "📦", label: "Items", labelUrdu: "اسٹاک" },
@@ -18,9 +18,10 @@ export default function BottomNav({
   return (
     <nav
       aria-label="Main"
-      className="fixed inset-x-0 bottom-0 z-20 mx-auto flex max-w-md border-t border-brand-white/10 bg-brand-charcoal"
+      className="fixed inset-x-0 bottom-0 z-20 mx-auto flex max-w-md border-t border-brand-white/10 bg-brand-charcoal lg:hidden"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      {TABS.map((tab) => {
+      {DASHBOARD_TABS.map((tab) => {
         const selected = tab.id === active;
         return (
           <button

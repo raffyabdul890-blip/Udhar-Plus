@@ -59,14 +59,18 @@ export default function AddCustomerModal({
   return (
     <Modal title="Add Customer" onClose={onClose}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {contactsPickerAvailable && (
+        {contactsPickerAvailable ? (
           <button
             type="button"
             onClick={handlePickContact}
             className="flex min-h-tap items-center justify-center gap-2 rounded-xl border border-brand-charcoal px-4 text-senior-sm font-bold text-brand-white transition active:scale-[0.98]"
           >
-            📇 Pick from Contacts
+            📇 Choose from Contacts
           </button>
+        ) : (
+          <p className="text-senior-xs text-brand-white/50">
+            Contact picker isn&rsquo;t supported on this device. Enter the number manually.
+          </p>
         )}
 
         <TextField

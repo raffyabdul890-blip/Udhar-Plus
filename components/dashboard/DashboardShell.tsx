@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import OnboardingModal from "@/components/auth/OnboardingModal";
 import TopNavbar from "@/components/dashboard/TopNavbar";
 import BottomNav, { type BottomTabId } from "@/components/dashboard/BottomNav";
+import DesktopSidebar from "@/components/dashboard/DesktopSidebar";
 import KhataTab from "@/components/dashboard/KhataTab";
 import CashbookTab from "@/components/cashbook/CashbookTab";
 import ItemsTab from "@/components/items/ItemsTab";
@@ -40,17 +41,24 @@ export default function DashboardShell({
   const primaryLabel = shopName ?? fullName ?? "Udhar Plus";
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col">
-      <div className="sticky top-0 z-10 bg-brand-black px-4 py-3">
-        <TopNavbar primaryLabel={primaryLabel} />
-      </div>
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col lg:max-w-5xl lg:flex-row">
+      <DesktopSidebar active={activeTab} onChange={setActiveTab} primaryLabel={primaryLabel} />
 
-      <div className="flex-1 px-4 pb-24">
-        {activeTab === "khata" && <KhataTab userId={userId} shopLabel={primaryLabel} />}
-        {activeTab === "cashbook" && <CashbookTab userId={userId} />}
-        {activeTab === "items" && <ItemsTab userId={userId} />}
-        {activeTab === "reports" && <ReportsTab userId={userId} />}
-        {activeTab === "more" && <MoreTab userId={userId} />}
+      <div className="flex min-h-screen flex-1 flex-col lg:min-h-0">
+        <div
+          className="sticky top-0 z-10 bg-brand-black px-4 pb-3 lg:static"
+          style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}
+        >
+          <TopNavbar primaryLabel={primaryLabel} />
+        </div>
+
+        <div className="flex-1 px-4 pb-[calc(6rem_+_env(safe-area-inset-bottom))] lg:pb-8">
+          {activeTab === "khata" && <KhataTab userId={userId} shopLabel={primaryLabel} />}
+          {activeTab === "cashbook" && <CashbookTab userId={userId} />}
+          {activeTab === "items" && <ItemsTab userId={userId} />}
+          {activeTab === "reports" && <ReportsTab userId={userId} />}
+          {activeTab === "more" && <MoreTab userId={userId} />}
+        </div>
       </div>
 
       <BottomNav active={activeTab} onChange={setActiveTab} />
