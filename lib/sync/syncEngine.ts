@@ -104,6 +104,11 @@ export async function syncPendingRecords(userId: string): Promise<void> {
         items: txn.items ?? null,
         // photo_id is deliberately omitted — photos are local-only (no Supabase
         // Storage configured), so a synced reference would be dangling on other devices.
+        payment_method: txn.payment_method ?? null,
+        payment_account_id: txn.payment_account_id ?? null,
+        link_kind: txn.link_kind ?? null,
+        linked_transaction_id: txn.linked_transaction_id ?? null,
+        linked_cashbook_entry_id: txn.linked_cashbook_entry_id ?? null,
         transaction_date: txn.transaction_date,
         created_at: txn.created_at,
         synced: true,
@@ -136,6 +141,9 @@ export async function syncPendingRecords(userId: string): Promise<void> {
         note: entry.note ?? null,
         is_expense: entry.is_expense ?? false,
         payment_method: entry.payment_method ?? "cash",
+        account_id: entry.account_id ?? null,
+        link_kind: entry.link_kind ?? null,
+        linked_transaction_id: entry.linked_transaction_id ?? null,
         // photo_id is deliberately omitted — same reasoning as transaction photos.
         entry_date: entry.entry_date,
         created_at: entry.created_at,

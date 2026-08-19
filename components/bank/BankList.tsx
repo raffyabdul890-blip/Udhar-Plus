@@ -1,5 +1,6 @@
 import { CustomerCardSkeletonList } from "@/components/skeletons/CustomerCardSkeleton";
 import BankLogoBadge from "@/components/bank/BankLogoBadge";
+import { getFinancialInstitution } from "@/lib/constants/banks";
 import type { LocalBankAccount } from "@/lib/db/offlineStorage";
 
 export default function BankList({
@@ -25,7 +26,9 @@ export default function BankList({
 
   return (
     <ul className="flex flex-col gap-3">
-      {accounts.map((account) => (
+      {accounts.map((account) => {
+        const category = getFinancialInstitution(account.bank_code)?.category;
+        return (
         <li key={account.id}>
           <button
             type="button"
@@ -35,9 +38,16 @@ export default function BankList({
             <BankLogoBadge bankCode={account.bank_code} />
 
             <div className="flex flex-1 flex-col gap-1 overflow-hidden">
-              <span className="truncate text-senior-base font-bold text-brand-white">
-                {account.account_title}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="truncate text-senior-base font-bold text-brand-white">
+                  {account.account_title}
+                </span>
+                {category && (
+                  <span className="shrink-0 rounded-full bg-brand-black/40 px-2 py-0.5 text-senior-xs font-medium text-brand-white/60">
+                    {category === "bank" ? "Bank" : "Wallet"}
+                  </span>
+                )}
+              </div>
               <span className="truncate text-senior-sm text-brand-white/70">
                 {account.bank_name} · {account.account_number}
               </span>
@@ -52,7 +62,8 @@ export default function BankList({
             </span>
           </button>
         </li>
-      ))}
+        );
+      })}
     </ul>
   );
 }

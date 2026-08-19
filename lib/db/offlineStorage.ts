@@ -45,6 +45,31 @@ export interface LineItem {
   pricePerUnit: number;
 }
 
+/**
+ * What a linked transaction/cashbook-entry pointer actually is, so the UI can
+ * decide edit/delete rules WITHOUT a runtime lookup of the other side:
+ * - "payment_owner" (customer txn): owns a linked cash entry or bank leg —
+ *   editable here; editing/deleting cascades to the linked side.
+ * - "customer_payment_leg" (bank txn): auto-created by a customer's Milay
+ *   bank/wallet payment — blocked from direct edit/delete, redirect to the
+ *   customer's ledger.
+ * - "expense_owner" (cashbook entry): owns a linked bank leg — editable here;
+ *   editing/deleting cascades to the linked side.
+ * - "expense_leg" (bank txn): auto-created by an Expense paid via bank/wallet
+ *   — blocked from direct edit/delete, redirect to Expenses.
+ * - "payment_leg" (cashbook entry): auto-created by a customer's Milay CASH
+ *   payment — blocked from direct edit/delete, redirect to the customer.
+ * - "transfer_leg" (bank txn): one side of a Bank/Wallet transfer — editable
+ *   from either leg; cascades to the other leg.
+ */
+export type LinkKind =
+  | "payment_owner"
+  | "customer_payment_leg"
+  | "expense_owner"
+  | "expense_leg"
+  | "payment_leg"
+  | "transfer_leg";
+
 export interface LocalTransaction {
   id: string;
   user_id: string;
@@ -57,6 +82,15 @@ export interface LocalTransaction {
   items?: LineItem[];
   /** References `photos.id` — local-only, never synced (no Supabase Storage configured yet). */
   photo_id?: string;
+  /** Customer Milay entries only — routes the payment into Cashbook (cash) or an account (bank/wallet). */
+  payment_method?: "cash" | "bank" | "wallet";
+  /** Which LocalBankAccount received the payment, when payment_method is "bank" or "wallet". */
+  payment_account_id?: string;
+  link_kind?: LinkKind;
+  /** Another `transactions` row this one is linked to (transfer partner, or a customer-payment ↔ bank leg). */
+  linked_transaction_id?: string;
+  /** A `cashbookEntries` row this one is linked to (customer-payment ↔ cash leg). */
+  linked_cashbook_entry_id?: string;
   transaction_date: string;
   created_at: string;
   synced: boolean;
@@ -107,6 +141,11 @@ export interface CashbookEntry {
    * physical cash, so it must not reduce the cash total.
    */
   payment_method?: "cash" | "bank" | "wallet";
+  /** Which LocalBankAccount this entry moved money through, when payment_method is "bank" or "wallet". */
+  account_id?: string;
+  link_kind?: LinkKind;
+  /** A `transactions` row this one is linked to (Expense ↔ bank leg, or a customer-payment ↔ cash leg). */
+  linked_transaction_id?: string;
   /** References `photos.id` — local-only, never synced (same convention as transaction photos). */
   photo_id?: string;
   entry_date: string;
@@ -367,6 +406,10 @@ export async function getAllTransactions(userId: string): Promise<LocalTransacti
   return requireDb().transactions.where("user_id").equals(userId).toArray();
 }
 
+export async function getTransaction(id: string): Promise<LocalTransaction | undefined> {
+  return requireDb().transactions.get(id);
+}
+
 // ---------------------------------------------------------------------------
 // Photos (local-only attachments — see LocalTransaction.photo_id)
 // ---------------------------------------------------------------------------
@@ -445,6 +488,10 @@ export async function addCashbookEntry(
   };
   await requireDb().cashbookEntries.put(record);
   return record;
+}
+
+export async function getCashbookEntry(id: string): Promise<CashbookEntry | undefined> {
+  return requireDb().cashbookEntries.get(id);
 }
 
 export async function updateCashbookEntry(

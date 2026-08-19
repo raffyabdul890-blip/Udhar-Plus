@@ -127,6 +127,20 @@ create table if not exists public.transactions (
 -- Photo attachments are local-only (IndexedDB) and never synced here.
 alter table public.transactions add column if not exists items jsonb;
 
+-- Phase 5: Bank & Wallet linking. payment_method/payment_account_id route a
+-- customer Milay payment into Cashbook (cash) or an account (bank/wallet).
+-- linked_transaction_id/linked_cashbook_entry_id are plain uuid pointers (no
+-- FK) — the linked row can belong to either table, and app code (lib/db/
+-- ledger.ts) already owns reversing them together on edit/delete, matching
+-- the existing polymorphic entity_id convention (also no FK) on this table.
+alter table public.transactions add column if not exists payment_method text
+  check (payment_method in ('cash', 'bank', 'wallet'));
+alter table public.transactions add column if not exists payment_account_id uuid;
+alter table public.transactions add column if not exists link_kind text
+  check (link_kind in ('payment_owner', 'customer_payment_leg', 'expense_leg', 'transfer_leg'));
+alter table public.transactions add column if not exists linked_transaction_id uuid;
+alter table public.transactions add column if not exists linked_cashbook_entry_id uuid;
+
 create index if not exists transactions_user_id_idx on public.transactions (user_id);
 create index if not exists transactions_entity_idx on public.transactions (entity_type, entity_id);
 
@@ -233,6 +247,12 @@ create table if not exists public.cashbook_entries (
 alter table public.cashbook_entries add column if not exists is_expense boolean not null default false;
 alter table public.cashbook_entries add column if not exists payment_method text not null default 'cash'
   check (payment_method in ('cash', 'bank', 'wallet'));
+
+-- Phase 5: Bank & Wallet linking — same rationale as transactions above.
+alter table public.cashbook_entries add column if not exists account_id uuid;
+alter table public.cashbook_entries add column if not exists link_kind text
+  check (link_kind in ('expense_owner', 'payment_leg'));
+alter table public.cashbook_entries add column if not exists linked_transaction_id uuid;
 
 create index if not exists cashbook_entries_user_id_idx on public.cashbook_entries (user_id);
 create index if not exists cashbook_entries_date_idx on public.cashbook_entries (entry_date);

@@ -204,6 +204,7 @@ export default function KhataTab({ userId, shopLabel }: { userId: string; shopLa
       {modal.kind === "bank-txn" && openAccount && (
         <BankTransactionModal
           account={openAccount}
+          accounts={bankAccounts}
           onClose={() => setModal({ kind: "none" })}
           onSaved={reload}
           onDeleted={() => {

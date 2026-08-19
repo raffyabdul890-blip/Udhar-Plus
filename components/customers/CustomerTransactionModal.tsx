@@ -27,11 +27,14 @@ import {
 import { buildLedgerRows } from "@/lib/ledgerRows";
 import { downloadCanvasAsPng, renderBillCanvas } from "@/lib/canvasBill";
 import { buildItemizedReceiptMessage } from "@/lib/whatsapp";
+import { getFinancialInstitution } from "@/lib/constants/banks";
 import {
+  getBankAccounts,
   getItems,
   getTransactionsForEntity,
   savePhoto,
   type LineItem,
+  type LocalBankAccount,
   type LocalCustomer,
   type LocalItem,
   type LocalTransaction,
@@ -74,10 +77,13 @@ export default function CustomerTransactionModal({
 }) {
   const [history, setHistory] = useState<LocalTransaction[]>([]);
   const [catalogItems, setCatalogItems] = useState<LocalItem[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<LocalBankAccount[]>([]);
   const [editingTransaction, setEditingTransaction] = useState<LocalTransaction | null>(null);
   const [entryType, setEntryType] = useState<EntryType>(initialEntryType ?? "DIYE");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank" | "wallet">("cash");
+  const [paymentAccountId, setPaymentAccountId] = useState("");
   const [dateValue, setDateValue] = useState(() => toDatetimeLocalValue(new Date()));
   const [showItems, setShowItems] = useState(false);
   const [items, setItems] = useState<LineItem[]>([]);
@@ -101,7 +107,12 @@ export default function CustomerTransactionModal({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     reloadHistory();
     getItems(customer.user_id).then((rows) => setCatalogItems(rows));
+    getBankAccounts(customer.user_id).then((rows) => setBankAccounts(rows));
   }, [reloadHistory, customer.user_id]);
+
+  const accountOptions = bankAccounts.filter(
+    (a) => getFinancialInstitution(a.bank_code)?.category === paymentMethod
+  );
 
   const sortedHistory = [...history].sort((a, b) => compareTransactionDates(b, a));
 
@@ -124,6 +135,8 @@ export default function CustomerTransactionModal({
     setShowItems(false);
     setItems([]);
     setPhotoState({ kind: "none" });
+    setPaymentMethod("cash");
+    setPaymentAccountId("");
     setError(null);
   }
 
@@ -136,6 +149,8 @@ export default function CustomerTransactionModal({
     setItems(txn.items ?? []);
     setShowItems(Boolean(txn.items?.length));
     setPhotoState(txn.photo_id ? { kind: "existing", id: txn.photo_id } : { kind: "none" });
+    setPaymentMethod(txn.payment_method ?? "cash");
+    setPaymentAccountId(txn.payment_account_id ?? "");
     setError(null);
   }
 
@@ -165,6 +180,15 @@ export default function CustomerTransactionModal({
       return;
     }
 
+    const selectedAccount =
+      entryType === "MILAY" && paymentMethod !== "cash"
+        ? bankAccounts.find((a) => a.id === paymentAccountId)
+        : undefined;
+    if (entryType === "MILAY" && paymentMethod !== "cash" && !selectedAccount) {
+      setError(`Choose which ${paymentMethod} account received this payment.`);
+      return;
+    }
+
     setSaving(true);
 
     let photoId: string | undefined;
@@ -178,6 +202,8 @@ export default function CustomerTransactionModal({
       note: note.trim() || undefined,
       items: items.length > 0 ? items : undefined,
       photoId,
+      paymentMethod: entryType === "MILAY" ? paymentMethod : undefined,
+      paymentAccount: selectedAccount,
     };
     const type = entryType === "DIYE" ? ("OUT" as const) : ("IN" as const);
     const wasNewItemizedEntry = !editingTransaction && items.length > 0;
@@ -436,6 +462,45 @@ export default function CustomerTransactionModal({
               </button>
             )}
           </>
+        )}
+
+        {entryType === "MILAY" && (
+          <div className="flex flex-col gap-2">
+            <SegmentedControl
+              label="Payment method"
+              value={paymentMethod}
+              onChange={(value) => {
+                setPaymentMethod(value);
+                setPaymentAccountId("");
+              }}
+              options={[
+                { value: "cash", label: "Cash" },
+                { value: "bank", label: "Bank" },
+                { value: "wallet", label: "Wallet" },
+              ]}
+            />
+            {paymentMethod !== "cash" && (
+              accountOptions.length > 0 ? (
+                <select
+                  aria-label={`Choose ${paymentMethod} account`}
+                  value={paymentAccountId}
+                  onChange={(e) => setPaymentAccountId(e.target.value)}
+                  className="min-h-tap rounded-xl border border-brand-charcoal bg-brand-black px-4 text-senior-base text-brand-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
+                >
+                  <option value="">— Choose account —</option>
+                  {accountOptions.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.account_title} ({a.bank_name})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <p className="text-senior-xs text-brand-white/50">
+                  No {paymentMethod} account yet — add one in Bank &amp; Wallet first.
+                </p>
+              )
+            )}
+          </div>
         )}
 
         <TextField

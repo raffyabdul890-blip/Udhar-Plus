@@ -5,11 +5,16 @@ import DateRangeFilter from "@/components/ui/DateRangeFilter";
 import SimpleBarChart from "@/components/reports/SimpleBarChart";
 import { CustomerCardSkeletonList } from "@/components/skeletons/CustomerCardSkeleton";
 import CustomerTransactionModal from "@/components/customers/CustomerTransactionModal";
+import BankTransactionModal from "@/components/bank/BankTransactionModal";
+import BankLogoBadge from "@/components/bank/BankLogoBadge";
+import { getFinancialInstitution } from "@/lib/constants/banks";
 import {
   getAllTransactions,
+  getBankAccounts,
   getCashbookEntries,
   getCustomers,
   type CashbookEntry,
+  type LocalBankAccount,
   type LocalCustomer,
   type LocalTransaction,
 } from "@/lib/db/offlineStorage";
@@ -32,20 +37,24 @@ export default function ReportsTab({ userId, shopLabel }: { userId: string; shop
   const [customers, setCustomers] = useState<LocalCustomer[]>([]);
   const [transactions, setTransactions] = useState<LocalTransaction[]>([]);
   const [cashbookEntries, setCashbookEntries] = useState<CashbookEntry[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<LocalBankAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [datePreset, setDatePreset] = useState<DateRangePreset>("today");
   const [customRange, setCustomRange] = useState({ start: "", end: "" });
   const [openCustomerId, setOpenCustomerId] = useState<string | null>(null);
+  const [openAccountId, setOpenAccountId] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
-    const [customerRows, transactionRows, cashbookRows] = await Promise.all([
+    const [customerRows, transactionRows, cashbookRows, bankRows] = await Promise.all([
       getCustomers(userId),
       getAllTransactions(userId),
       getCashbookEntries(userId),
+      getBankAccounts(userId),
     ]);
     setCustomers(customerRows);
     setTransactions(transactionRows);
     setCashbookEntries(cashbookRows);
+    setBankAccounts(bankRows);
     setLoading(false);
   }, [userId]);
 
@@ -64,6 +73,15 @@ export default function ReportsTab({ userId, shopLabel }: { userId: string; shop
   const cashBalance = cashbookEntries
     .filter(isCashEntry)
     .reduce((sum, e) => sum + (e.type === "IN" ? e.amount : -e.amount), 0);
+  const totalBankBalance = bankAccounts
+    .filter((a) => getFinancialInstitution(a.bank_code)?.category === "bank")
+    .reduce((sum, a) => sum + a.current_balance, 0);
+  const totalWalletBalance = bankAccounts
+    .filter((a) => getFinancialInstitution(a.bank_code)?.category === "wallet")
+    .reduce((sum, a) => sum + a.current_balance, 0);
+  // Liquid = money the shop can actually spend right now — cash + bank + wallet.
+  // Receivable is what customers owe, not liquid cash, so it's kept separate.
+  const liquidBalance = cashBalance + totalBankBalance + totalWalletBalance;
 
   // ---- Sales (selected range) ----
   const salesInRange = useMemo(
@@ -118,6 +136,7 @@ export default function ReportsTab({ userId, shopLabel }: { userId: string; shop
     .slice(0, 10);
 
   const openCustomer = openCustomerId ? customers.find((c) => c.id === openCustomerId) : undefined;
+  const openAccount = openAccountId ? bankAccounts.find((a) => a.id === openAccountId) : undefined;
 
   if (loading) {
     return <CustomerCardSkeletonList count={3} label="Loading reports" />;
@@ -157,6 +176,52 @@ export default function ReportsTab({ userId, shopLabel }: { userId: string; shop
             </p>
           </div>
         </div>
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-senior-base font-bold text-brand-white">Bank &amp; Wallet</h2>
+        <div className="grid grid-cols-3 gap-2 lg:gap-3">
+          <div className="rounded-xl bg-brand-charcoal/40 p-3">
+            <p className="text-senior-xs text-brand-white/60">Total Bank</p>
+            <p className="text-senior-lg font-bold text-brand-white">
+              {totalBankBalance.toLocaleString("en-PK")}
+            </p>
+          </div>
+          <div className="rounded-xl bg-brand-charcoal/40 p-3">
+            <p className="text-senior-xs text-brand-white/60">Total Wallet</p>
+            <p className="text-senior-lg font-bold text-brand-white">
+              {totalWalletBalance.toLocaleString("en-PK")}
+            </p>
+          </div>
+          <div className="rounded-xl bg-brand-charcoal/40 p-3">
+            <p className="text-senior-xs text-brand-white/60">Liquid Balance</p>
+            <p className="text-senior-lg font-bold text-brand-green">
+              {liquidBalance.toLocaleString("en-PK")}
+            </p>
+            <p className="text-senior-xs text-brand-white/50">Cash + Bank + Wallet</p>
+          </div>
+        </div>
+        {bankAccounts.length > 0 && (
+          <ul className="flex flex-col gap-2">
+            {bankAccounts.map((account) => (
+              <li key={account.id}>
+                <button
+                  type="button"
+                  onClick={() => setOpenAccountId(account.id)}
+                  className="flex w-full items-center gap-3 rounded-xl bg-brand-charcoal/40 px-3 py-2 text-left transition active:scale-[0.99]"
+                >
+                  <BankLogoBadge bankCode={account.bank_code} size="sm" />
+                  <span className="flex-1 truncate text-senior-sm font-medium text-brand-white">
+                    {account.account_title}
+                  </span>
+                  <span className="shrink-0 text-senior-sm font-bold text-brand-white">
+                    {account.current_balance.toLocaleString("en-PK")}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section className="flex flex-col gap-3">
@@ -284,6 +349,19 @@ export default function ReportsTab({ userId, shopLabel }: { userId: string; shop
           onSaved={reload}
           onDeleted={() => {
             setOpenCustomerId(null);
+            reload();
+          }}
+        />
+      )}
+
+      {openAccount && (
+        <BankTransactionModal
+          account={openAccount}
+          accounts={bankAccounts}
+          onClose={() => setOpenAccountId(null)}
+          onSaved={reload}
+          onDeleted={() => {
+            setOpenAccountId(null);
             reload();
           }}
         />

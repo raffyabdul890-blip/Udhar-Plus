@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Modal from "@/components/ui/Modal";
 import TextField from "@/components/ui/TextField";
 import SegmentedControl from "@/components/ui/SegmentedControl";
@@ -10,12 +10,9 @@ import {
   CASH_OUT_CATEGORIES,
   EXPENSE_CATEGORIES,
 } from "@/lib/constants/cashbookCategories";
-import {
-  addCashbookEntry,
-  savePhoto,
-  updateCashbookEntry,
-  type CashbookEntry,
-} from "@/lib/db/offlineStorage";
+import { getFinancialInstitution } from "@/lib/constants/banks";
+import { recordCashbookEntry, updateCashbookEntryWithLink } from "@/lib/db/ledger";
+import { getBankAccounts, savePhoto, type CashbookEntry, type LocalBankAccount } from "@/lib/db/offlineStorage";
 import { fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/utils/datetime";
 
 type PhotoState = { kind: "none" } | { kind: "new"; file: File } | { kind: "existing"; id: string };
@@ -47,6 +44,8 @@ export default function AddCashbookEntryModal({
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank" | "wallet">(
     existing?.payment_method ?? "cash"
   );
+  const [accountId, setAccountId] = useState(existing?.account_id ?? "");
+  const [bankAccounts, setBankAccounts] = useState<LocalBankAccount[]>([]);
   const [dateValue, setDateValue] = useState(() =>
     toDatetimeLocalValue(existing ? new Date(existing.entry_date) : new Date())
   );
@@ -56,8 +55,15 @@ export default function AddCashbookEntryModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    getBankAccounts(userId).then((rows) => setBankAccounts(rows));
+  }, [userId]);
+
   const categoryOptions = isExpense ? EXPENSE_CATEGORIES : type === "IN" ? CASH_IN_CATEGORIES : CASH_OUT_CATEGORIES;
   const title = existing ? (isExpense ? "Edit Expense" : "Edit Cash Entry") : isExpense ? "Add Expense" : "Add Cash Entry";
+  const accountOptions = bankAccounts.filter(
+    (a) => getFinancialInstitution(a.bank_code)?.category === paymentMethod
+  );
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -70,6 +76,13 @@ export default function AddCashbookEntryModal({
     }
     if (!category.trim()) {
       setError("Choose or enter a category.");
+      return;
+    }
+
+    const selectedAccount =
+      isExpense && paymentMethod !== "cash" ? bankAccounts.find((a) => a.id === accountId) : undefined;
+    if (isExpense && paymentMethod !== "cash" && !selectedAccount) {
+      setError(`Choose which ${paymentMethod} account this was paid from.`);
       return;
     }
 
@@ -87,16 +100,17 @@ export default function AddCashbookEntryModal({
       amount: parsedAmount,
       category: category.trim(),
       note: note.trim() || undefined,
-      is_expense: isExpense,
-      payment_method: isExpense || type === "OUT" ? paymentMethod : "cash",
-      photo_id: photoId,
-      entry_date: fromDatetimeLocalValue(dateValue),
-    } as const;
+      isExpense,
+      paymentMethod: isExpense || type === "OUT" ? paymentMethod : ("cash" as const),
+      account: selectedAccount,
+      photoId,
+      entryDate: fromDatetimeLocalValue(dateValue),
+    };
 
     if (existing) {
-      await updateCashbookEntry(existing.id, fields);
+      await updateCashbookEntryWithLink(existing, fields);
     } else {
-      await addCashbookEntry({ user_id: userId, ...fields });
+      await recordCashbookEntry(userId, fields);
     }
 
     setSaving(false);
@@ -147,16 +161,42 @@ export default function AddCashbookEntryModal({
         </datalist>
 
         {(isExpense || type === "OUT") && (
-          <SegmentedControl
-            label="Payment method"
-            value={paymentMethod}
-            onChange={setPaymentMethod}
-            options={[
-              { value: "cash", label: "Cash" },
-              { value: "bank", label: "Bank" },
-              { value: "wallet", label: "Wallet" },
-            ]}
-          />
+          <div className="flex flex-col gap-2">
+            <SegmentedControl
+              label="Payment method"
+              value={paymentMethod}
+              onChange={(value) => {
+                setPaymentMethod(value);
+                setAccountId("");
+              }}
+              options={[
+                { value: "cash", label: "Cash" },
+                { value: "bank", label: "Bank" },
+                { value: "wallet", label: "Wallet" },
+              ]}
+            />
+            {isExpense && paymentMethod !== "cash" && (
+              accountOptions.length > 0 ? (
+                <select
+                  aria-label={`Choose ${paymentMethod} account`}
+                  value={accountId}
+                  onChange={(e) => setAccountId(e.target.value)}
+                  className="min-h-tap rounded-xl border border-brand-charcoal bg-brand-black px-4 text-senior-base text-brand-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
+                >
+                  <option value="">— Choose account —</option>
+                  {accountOptions.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.account_title} ({a.bank_name})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <p className="text-senior-xs text-brand-white/50">
+                  No {paymentMethod} account yet — add one in Bank &amp; Wallet first.
+                </p>
+              )
+            )}
+          </div>
         )}
 
         <TextField

@@ -7,11 +7,8 @@ import SegmentedControl from "@/components/ui/SegmentedControl";
 import { CustomerCardSkeletonList } from "@/components/skeletons/CustomerCardSkeleton";
 import AddCashbookEntryModal from "@/components/cashbook/AddCashbookEntryModal";
 import EntryPhotoThumbnail from "@/components/customers/EntryPhotoThumbnail";
-import {
-  deleteCashbookEntry,
-  getCashbookEntries,
-  type CashbookEntry,
-} from "@/lib/db/offlineStorage";
+import { deleteCashbookEntryWithLink } from "@/lib/db/ledger";
+import { getCashbookEntries, type CashbookEntry } from "@/lib/db/offlineStorage";
 import {
   isBeforeRange,
   isWithinRange,
@@ -73,7 +70,7 @@ export default function CashbookTab({ userId }: { userId: string }) {
 
   async function handleConfirmDelete() {
     if (!pendingDelete) return;
-    await deleteCashbookEntry(pendingDelete.id, userId);
+    await deleteCashbookEntryWithLink(pendingDelete);
     setPendingDelete(null);
     reload();
   }
