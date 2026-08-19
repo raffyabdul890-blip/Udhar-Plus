@@ -40,7 +40,7 @@ received, and see a running balance — reliably, even offline.
 - Skeleton loading components (`CustomerCardSkeleton`, `BalanceCardSkeleton`)
 
 ### Phase 1 — Database Schema, OTP Auth & Offline Engine (complete)
-- `customers`, `bank_accounts`, `transactions` tables + RLS policies (`supabase/schema.sql`)
+- `customers`, `bank_accounts`, `transactions` tables + RLS policies (`supabase_schema.sql`)
 - Phone Number + OTP login (`app/login/page.tsx`) and Logout — no PIN gate
 - Local IndexedDB manager via Dexie (`lib/db/offlineStorage.ts`) for sub-10ms reads/writes
 - Background sync engine (`lib/sync/syncEngine.ts`): pushes pending offline writes to Supabase on

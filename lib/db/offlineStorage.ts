@@ -42,7 +42,7 @@ export interface LocalTransaction {
   type: "IN" | "OUT";
   amount: number;
   note?: string;
-  /** Itemized breakdown, customer entries only. Synced as jsonb — see supabase/schema.sql. */
+  /** Itemized breakdown, customer entries only. Synced as jsonb — see supabase_schema.sql. */
   items?: LineItem[];
   /** References `photos.id` — local-only, never synced (no Supabase Storage configured yet). */
   photo_id?: string;

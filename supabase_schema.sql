@@ -1,10 +1,10 @@
 -- Udhar Plus — consolidated, safe-to-rerun schema/migration script.
 --
--- Unlike supabase/schema.sql (the original fresh-install script, kept as a
--- historical reference), every statement here is idempotent: CREATE TABLE IF
--- NOT EXISTS, ADD COLUMN IF NOT EXISTS, and DROP POLICY IF EXISTS + CREATE
--- POLICY. Run this in the Supabase SQL Editor any time — whether the base
--- tables already exist or not, it converges the database to the same state.
+-- This is the single source of truth for the database schema. Every
+-- statement here is idempotent: CREATE TABLE IF NOT EXISTS, ADD COLUMN IF
+-- NOT EXISTS, and DROP POLICY IF EXISTS + CREATE POLICY. Run this in the
+-- Supabase SQL Editor any time — whether the base tables already exist or
+-- not, it converges the database to the same state.
 --
 -- RLS convention throughout: deny-all by default, explicit per-operation
 -- policies scoped to auth.uid() = user_id (see SECURITY.md §2).
