@@ -8,6 +8,15 @@ export interface LocalCustomer {
   /** WhatsApp/phone number for payment reminders — saved on first use, any common format. */
   phone?: string;
   current_balance: number;
+  /**
+   * Denormalized max(transaction_date) across this customer's entries — same
+   * pattern as current_balance, kept in sync by lib/db/ledger.ts on every
+   * record/update/delete. Lets the customer list show "last entry" without
+   * loading the entire transactions table. May be stale/undefined for
+   * customers whose history predates this field; it self-heals on their next
+   * transaction write.
+   */
+  last_transaction_at?: string;
   created_at: string;
   updated_at: string;
   synced: boolean;
@@ -28,6 +37,8 @@ export interface LocalBankAccount {
 
 export interface LineItem {
   id: string;
+  /** References LocalItem.id when picked from the catalog — undefined for a freehand/manual line. */
+  itemId?: string;
   name: string;
   quantity: number;
   unit?: string;
@@ -397,6 +408,10 @@ export async function deleteItem(id: string, userId: string): Promise<void> {
 
 export async function getItems(userId: string): Promise<LocalItem[]> {
   return requireDb().items.where("user_id").equals(userId).toArray();
+}
+
+export async function getItem(id: string): Promise<LocalItem | undefined> {
+  return requireDb().items.get(id);
 }
 
 // ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import TextField from "@/components/ui/TextField";
@@ -15,7 +15,7 @@ import {
   fromDatetimeLocalValue,
   toDatetimeLocalValue,
 } from "@/lib/utils/datetime";
-import type { LocalBankAccount, LocalTransaction } from "@/lib/db/offlineStorage";
+import { getTransactionsForEntity, type LocalBankAccount, type LocalTransaction } from "@/lib/db/offlineStorage";
 
 type PendingDelete = { kind: "transaction"; transaction: LocalTransaction } | { kind: "account" };
 
@@ -30,17 +30,16 @@ function formatDateTime(iso: string) {
 
 export default function BankTransactionModal({
   account,
-  transactions,
   onClose,
   onSaved,
   onDeleted,
 }: {
   account: LocalBankAccount;
-  transactions: LocalTransaction[];
   onClose: () => void;
   onSaved: () => void;
   onDeleted: () => void;
 }) {
+  const [transactions, setTransactions] = useState<LocalTransaction[]>([]);
   const [type, setType] = useState<"IN" | "OUT">("IN");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
@@ -48,6 +47,17 @@ export default function BankTransactionModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
+
+  // Scoped to this one account via the [entity_type+entity_id] index, not the
+  // whole transactions table — same rationale as CustomerTransactionModal.
+  const reloadHistory = useCallback(async () => {
+    setTransactions(await getTransactionsForEntity("bank", account.id));
+  }, [account.id]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    reloadHistory();
+  }, [reloadHistory]);
 
   const history = [...transactions].sort((a, b) => compareTransactionDates(b, a));
 
@@ -71,6 +81,7 @@ export default function BankTransactionModal({
     );
     setSaving(false);
     onSaved();
+    await reloadHistory();
     onClose();
   }
 
@@ -81,6 +92,7 @@ export default function BankTransactionModal({
       await deleteBankTransactionEntry(account, pendingDelete.transaction);
       setPendingDelete(null);
       onSaved();
+      await reloadHistory();
       return;
     }
 

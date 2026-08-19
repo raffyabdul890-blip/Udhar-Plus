@@ -13,17 +13,24 @@ import {
 
 export default function WhatsAppReminderModal({
   customer,
+  title,
+  presetMessage,
   onClose,
   onSaved,
 }: {
   customer: LocalCustomer;
+  /** Modal title override — defaults to the balance-reminder wording. */
+  title?: string;
+  /** Pre-filled message (e.g. an itemized receipt) — defaults to the balance reminder. */
+  presetMessage?: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const [phone, setPhone] = useState(customer.phone ?? "");
+  const [message, setMessage] = useState(
+    presetMessage ?? buildReminderMessage(customer.name, customer.current_balance)
+  );
   const [error, setError] = useState<string | null>(null);
-
-  const message = buildReminderMessage(customer.name, customer.current_balance);
 
   async function handleOpenWhatsApp(event: FormEvent) {
     event.preventDefault();
@@ -46,7 +53,7 @@ export default function WhatsAppReminderModal({
   }
 
   return (
-    <Modal title={`Send WhatsApp Reminder to ${customer.name}`} onClose={onClose}>
+    <Modal title={title ?? `Send WhatsApp Reminder to ${customer.name}`} onClose={onClose}>
       <form onSubmit={handleOpenWhatsApp} className="flex flex-col gap-4">
         <TextField
           id="whatsapp-phone"
@@ -60,10 +67,16 @@ export default function WhatsAppReminderModal({
         />
 
         <div className="flex flex-col gap-2">
-          <span className="text-senior-base font-medium text-brand-white">Message preview</span>
-          <p className="rounded-xl border border-brand-charcoal bg-brand-black/40 p-4 text-senior-sm text-brand-white/80">
-            {message}
-          </p>
+          <label htmlFor="whatsapp-message" className="text-senior-base font-medium text-brand-white">
+            Message (editable)
+          </label>
+          <textarea
+            id="whatsapp-message"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            rows={6}
+            className="min-h-tap rounded-xl border border-brand-charcoal bg-brand-black/40 p-4 text-senior-sm text-brand-white/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
+          />
         </div>
 
         {error && (

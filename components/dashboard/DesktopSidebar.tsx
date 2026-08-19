@@ -12,7 +12,7 @@ export default function DesktopSidebar({
 }) {
   return (
     <nav
-      aria-label="Main"
+      aria-label="Main (desktop)"
       className="hidden w-64 shrink-0 flex-col gap-1 border-r border-brand-white/10 bg-brand-charcoal/20 px-3 py-6 lg:flex"
     >
       <p className="truncate px-3 pb-6 text-senior-lg font-bold text-brand-white">{primaryLabel}</p>

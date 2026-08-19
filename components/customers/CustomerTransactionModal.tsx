@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import TextField from "@/components/ui/TextField";
@@ -24,11 +24,28 @@ import {
   fromDatetimeLocalValue,
   toDatetimeLocalValue,
 } from "@/lib/utils/datetime";
-import { savePhoto, type LineItem, type LocalCustomer, type LocalTransaction } from "@/lib/db/offlineStorage";
+import { buildLedgerRows } from "@/lib/ledgerRows";
+import { downloadCanvasAsPng, renderBillCanvas } from "@/lib/canvasBill";
+import { buildItemizedReceiptMessage } from "@/lib/whatsapp";
+import {
+  getItems,
+  getTransactionsForEntity,
+  savePhoto,
+  type LineItem,
+  type LocalCustomer,
+  type LocalItem,
+  type LocalTransaction,
+} from "@/lib/db/offlineStorage";
 
-type EntryType = "DIYE" | "MILAY" | "SETTLE";
+export type EntryType = "DIYE" | "MILAY" | "SETTLE";
 type PendingDelete = { kind: "transaction"; transaction: LocalTransaction } | { kind: "customer" };
 type PhotoState = { kind: "none" } | { kind: "new"; file: File } | { kind: "existing"; id: string };
+type ReceiptState = {
+  items: LineItem[];
+  total: number;
+  type: "IN" | "OUT";
+  balanceAfter: number;
+} | null;
 
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString("en-PK", {
@@ -42,20 +59,23 @@ function formatDateTime(iso: string) {
 export default function CustomerTransactionModal({
   customer,
   shopLabel,
-  transactions,
+  initialEntryType,
   onClose,
   onSaved,
   onDeleted,
 }: {
   customer: LocalCustomer;
   shopLabel: string;
-  transactions: LocalTransaction[];
+  /** Pre-selects Give Udhaar / Receive Payment when opened from a quick-action shortcut. Defaults to Diye. */
+  initialEntryType?: EntryType;
   onClose: () => void;
   onSaved: () => void;
   onDeleted: () => void;
 }) {
+  const [history, setHistory] = useState<LocalTransaction[]>([]);
+  const [catalogItems, setCatalogItems] = useState<LocalItem[]>([]);
   const [editingTransaction, setEditingTransaction] = useState<LocalTransaction | null>(null);
-  const [entryType, setEntryType] = useState<EntryType>("DIYE");
+  const [entryType, setEntryType] = useState<EntryType>(initialEntryType ?? "DIYE");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [dateValue, setDateValue] = useState(() => toDatetimeLocalValue(new Date()));
@@ -67,8 +87,23 @@ export default function CustomerTransactionModal({
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const [showReminder, setShowReminder] = useState(false);
   const [showExportSummary, setShowExportSummary] = useState(false);
+  const [receipt, setReceipt] = useState<ReceiptState>(null);
+  const [showReceiptWhatsApp, setShowReceiptWhatsApp] = useState(false);
 
-  const history = [...transactions].sort((a, b) => compareTransactionDates(b, a));
+  // Scoped to this one customer via the [entity_type+entity_id] index — not the
+  // whole transactions table — so opening this modal stays fast regardless of
+  // how much history the rest of the shop has accumulated.
+  const reloadHistory = useCallback(async () => {
+    setHistory(await getTransactionsForEntity("customer", customer.id));
+  }, [customer.id]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    reloadHistory();
+    getItems(customer.user_id).then((rows) => setCatalogItems(rows));
+  }, [reloadHistory, customer.user_id]);
+
+  const sortedHistory = [...history].sort((a, b) => compareTransactionDates(b, a));
 
   // Items are the source of truth once they have real values — recalculates the
   // amount whenever the item rows change, but never wipes a manually-typed
@@ -119,6 +154,7 @@ export default function CustomerTransactionModal({
       setSaving(false);
       onSaved();
       resetForm();
+      await reloadHistory();
       onClose();
       return;
     }
@@ -144,6 +180,7 @@ export default function CustomerTransactionModal({
       photoId,
     };
     const type = entryType === "DIYE" ? ("OUT" as const) : ("IN" as const);
+    const wasNewItemizedEntry = !editingTransaction && items.length > 0;
 
     if (editingTransaction) {
       await updateCustomerTransactionEntry(
@@ -160,6 +197,16 @@ export default function CustomerTransactionModal({
 
     setSaving(false);
     onSaved();
+    await reloadHistory();
+
+    if (wasNewItemizedEntry) {
+      const balanceAfter =
+        type === "OUT" ? customer.current_balance + parsedAmount : customer.current_balance - parsedAmount;
+      setReceipt({ items, total: parsedAmount, type, balanceAfter });
+      resetForm();
+      return;
+    }
+
     resetForm();
     onClose();
   }
@@ -171,12 +218,124 @@ export default function CustomerTransactionModal({
       await deleteCustomerTransactionEntry(customer, pendingDelete.transaction);
       setPendingDelete(null);
       onSaved();
+      await reloadHistory();
       return;
     }
 
-    await deleteCustomerWithHistory(customer, transactions);
+    await deleteCustomerWithHistory(customer, history);
     setPendingDelete(null);
     onDeleted();
+  }
+
+  function handleDownloadReceiptBill() {
+    if (!receipt) return;
+    const syntheticTxn: LocalTransaction = {
+      id: crypto.randomUUID(),
+      user_id: customer.user_id,
+      entity_type: "customer",
+      entity_id: customer.id,
+      type: receipt.type,
+      amount: receipt.total,
+      items: receipt.items,
+      transaction_date: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      synced: true,
+    };
+    const canvas = renderBillCanvas({
+      shopLabel,
+      customerName: customer.name,
+      customerPhone: customer.phone,
+      rows: buildLedgerRows([syntheticTxn]),
+      netBalance: receipt.balanceAfter,
+    });
+    downloadCanvasAsPng(canvas, `${customer.name.replace(/\s+/g, "-")}-bill.png`);
+  }
+
+  if (receipt) {
+    return (
+      <Modal
+        title="Bill Saved"
+        onClose={() => {
+          setReceipt(null);
+          onClose();
+        }}
+      >
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1 rounded-xl border border-brand-charcoal bg-brand-black/40 p-4">
+            {receipt.items.map((item) => (
+              <div
+                key={item.id}
+                className="flex justify-between gap-3 text-senior-sm text-brand-white/90"
+              >
+                <span className="truncate">
+                  {item.name || "Item"} x{item.quantity}
+                  {item.unit ? ` ${item.unit}` : ""}
+                </span>
+                <span className="shrink-0">
+                  {(item.quantity * item.pricePerUnit).toLocaleString("en-PK")}
+                </span>
+              </div>
+            ))}
+            <div className="mt-2 flex justify-between border-t border-brand-white/10 pt-2 text-senior-base font-bold text-brand-white">
+              <span>Total</span>
+              <span>{receipt.total.toLocaleString("en-PK")}</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowReceiptWhatsApp(true)}
+            disabled={!customer.phone}
+            className="min-h-tap rounded-xl bg-brand-red px-6 text-senior-base font-bold text-brand-white transition active:scale-[0.98] active:bg-brand-darkred disabled:bg-brand-charcoal disabled:text-brand-white/50"
+          >
+            💬 Share via WhatsApp
+          </button>
+          {!customer.phone && (
+            <p className="text-senior-xs text-brand-white/60">
+              Add a phone number to share this bill on WhatsApp.
+            </p>
+          )}
+
+          <button
+            type="button"
+            onClick={handleDownloadReceiptBill}
+            className="min-h-tap rounded-xl border border-brand-charcoal px-6 text-senior-base font-bold text-brand-white transition active:scale-[0.98]"
+          >
+            ⬇️ Download Bill
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setReceipt(null);
+              onClose();
+            }}
+            className="min-h-tap text-senior-sm font-medium text-brand-white/80 underline"
+          >
+            Done
+          </button>
+        </div>
+
+        {showReceiptWhatsApp && (
+          <WhatsAppReminderModal
+            customer={customer}
+            title={`Share Bill with ${customer.name}`}
+            presetMessage={buildItemizedReceiptMessage(
+              customer.name,
+              receipt.items,
+              receipt.total,
+              receipt.balanceAfter
+            )}
+            onClose={() => {
+              setShowReceiptWhatsApp(false);
+              setReceipt(null);
+              onClose();
+            }}
+            onSaved={onSaved}
+          />
+        )}
+      </Modal>
+    );
   }
 
   return (
@@ -261,7 +420,11 @@ export default function CustomerTransactionModal({
                     Remove items
                   </button>
                 </div>
-                <ItemizedEntryFields items={items} onChange={handleItemsChange} />
+                <ItemizedEntryFields
+                  items={items}
+                  catalogItems={catalogItems}
+                  onChange={handleItemsChange}
+                />
               </div>
             ) : (
               <button
@@ -330,11 +493,11 @@ export default function CustomerTransactionModal({
         )}
       </form>
 
-      {history.length > 0 && (
+      {sortedHistory.length > 0 && (
         <div className="flex flex-col gap-2 border-t border-brand-white/10 pt-4">
           <h3 className="text-senior-sm font-bold text-brand-white/80">Recent entries</h3>
           <ul className="flex max-h-64 flex-col gap-2 overflow-y-auto">
-            {history.map((txn) => (
+            {sortedHistory.map((txn) => (
               <li
                 key={txn.id}
                 className="flex items-center gap-3 rounded-xl bg-brand-black/40 px-3 py-2"
@@ -415,8 +578,9 @@ export default function CustomerTransactionModal({
         <ExportSummaryModal
           customer={customer}
           shopLabel={shopLabel}
-          transactions={transactions}
+          transactions={history}
           onClose={() => setShowExportSummary(false)}
+          onSaved={onSaved}
         />
       )}
     </Modal>

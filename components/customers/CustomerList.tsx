@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
 import { CustomerCardSkeletonList } from "@/components/skeletons/CustomerCardSkeleton";
-import type { LocalCustomer, LocalTransaction } from "@/lib/db/offlineStorage";
+import type { LocalCustomer } from "@/lib/db/offlineStorage";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-PK", {
@@ -14,27 +13,13 @@ function formatDate(iso: string) {
 
 export default function CustomerList({
   customers,
-  transactions,
   loading,
   onSelectCustomer,
 }: {
   customers: LocalCustomer[];
-  transactions: LocalTransaction[];
   loading: boolean;
   onSelectCustomer: (customer: LocalCustomer) => void;
 }) {
-  const lastEntryByCustomer = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const txn of transactions) {
-      if (txn.entity_type !== "customer") continue;
-      const existing = map.get(txn.entity_id);
-      if (!existing || txn.transaction_date > existing) {
-        map.set(txn.entity_id, txn.transaction_date);
-      }
-    }
-    return map;
-  }, [transactions]);
-
   if (loading) {
     return <CustomerCardSkeletonList count={4} />;
   }
@@ -50,7 +35,7 @@ export default function CustomerList({
   return (
     <ul className="flex flex-col gap-3">
       {customers.map((customer) => {
-        const lastEntry = lastEntryByCustomer.get(customer.id);
+        const lastEntry = customer.last_transaction_at;
         return (
           <li key={customer.id}>
             <button

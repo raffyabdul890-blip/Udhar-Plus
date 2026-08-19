@@ -1,14 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Modal from "@/components/ui/Modal";
+import WhatsAppReminderModal from "@/components/customers/WhatsAppReminderModal";
 import { buildLedgerRows, formatLedgerDate } from "@/lib/ledgerRows";
 import { downloadCanvasAsPng, renderBillCanvas } from "@/lib/canvasBill";
-import {
-  buildLedgerSummaryMessage,
-  buildWhatsAppUrl,
-  formatWhatsAppNumber,
-  isValidWhatsAppNumber,
-} from "@/lib/whatsapp";
+import { buildLedgerSummaryMessage } from "@/lib/whatsapp";
 import type { LocalCustomer, LocalTransaction } from "@/lib/db/offlineStorage";
 
 export default function ExportSummaryModal({
@@ -16,18 +13,19 @@ export default function ExportSummaryModal({
   shopLabel,
   transactions,
   onClose,
+  onSaved,
 }: {
   customer: LocalCustomer;
   shopLabel: string;
   transactions: LocalTransaction[];
   onClose: () => void;
+  onSaved: () => void;
 }) {
+  const [showWhatsApp, setShowWhatsApp] = useState(false);
   const rows = buildLedgerRows(transactions);
-  const formattedPhone = customer.phone ? formatWhatsAppNumber(customer.phone) : "";
-  const canShareWhatsApp = customer.phone && isValidWhatsAppNumber(formattedPhone);
+  const canShareWhatsApp = Boolean(customer.phone);
 
-  function handleShareWhatsApp() {
-    if (!canShareWhatsApp) return;
+  function buildSummaryMessage() {
     const recentLines = rows
       .slice(-5)
       .map(
@@ -36,14 +34,7 @@ export default function ExportSummaryModal({
             row.cashIn ?? row.cashOut ?? 0
           ).toLocaleString("en-PK")}`
       );
-    const message = buildLedgerSummaryMessage(
-      shopLabel,
-      customer.name,
-      customer.current_balance,
-      recentLines
-    );
-    window.open(buildWhatsAppUrl(formattedPhone, message), "_blank", "noopener,noreferrer");
-    onClose();
+    return buildLedgerSummaryMessage(shopLabel, customer.name, customer.current_balance, recentLines);
   }
 
   function handleDownloadBill() {
@@ -58,12 +49,24 @@ export default function ExportSummaryModal({
     onClose();
   }
 
+  if (showWhatsApp) {
+    return (
+      <WhatsAppReminderModal
+        customer={customer}
+        title={`Share Statement with ${customer.name}`}
+        presetMessage={buildSummaryMessage()}
+        onClose={onClose}
+        onSaved={onSaved}
+      />
+    );
+  }
+
   return (
     <Modal title={`Share / Export — ${customer.name}`} onClose={onClose}>
       <div className="flex flex-col gap-3">
         <button
           type="button"
-          onClick={handleShareWhatsApp}
+          onClick={() => setShowWhatsApp(true)}
           disabled={!canShareWhatsApp}
           className="min-h-tap rounded-xl bg-brand-red px-6 text-senior-base font-bold text-brand-white transition active:scale-[0.98] active:bg-brand-darkred disabled:bg-brand-charcoal disabled:text-brand-white/50"
         >

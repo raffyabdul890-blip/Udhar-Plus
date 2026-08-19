@@ -5,24 +5,26 @@ import SearchBar from "@/components/dashboard/SearchBar";
 import ModuleSwitcher, { type DashboardModule } from "@/components/dashboard/ModuleSwitcher";
 import KhataHeaderStats from "@/components/dashboard/KhataHeaderStats";
 import CustomerList from "@/components/customers/CustomerList";
-import AddCustomerModal from "@/components/customers/AddCustomerModal";
-import CustomerTransactionModal from "@/components/customers/CustomerTransactionModal";
+import AddCustomerModal, { type PostAddAction } from "@/components/customers/AddCustomerModal";
+import CustomerTransactionModal, {
+  type EntryType,
+} from "@/components/customers/CustomerTransactionModal";
+import WhatsAppReminderModal from "@/components/customers/WhatsAppReminderModal";
 import BankList from "@/components/bank/BankList";
 import AddBankAccountModal from "@/components/bank/AddBankAccountModal";
 import BankTransactionModal from "@/components/bank/BankTransactionModal";
 import {
-  getAllTransactions,
   getBankAccounts,
   getCustomers,
   type LocalBankAccount,
   type LocalCustomer,
-  type LocalTransaction,
 } from "@/lib/db/offlineStorage";
 
 type ActiveModal =
   | { kind: "none" }
   | { kind: "add-customer" }
-  | { kind: "customer-txn"; customerId: string }
+  | { kind: "customer-txn"; customerId: string; initialEntryType?: EntryType }
+  | { kind: "whatsapp"; customerId: string }
   | { kind: "add-bank" }
   | { kind: "bank-txn"; accountId: string };
 
@@ -31,19 +33,18 @@ export default function KhataTab({ userId, shopLabel }: { userId: string; shopLa
   const [search, setSearch] = useState("");
   const [customers, setCustomers] = useState<LocalCustomer[]>([]);
   const [bankAccounts, setBankAccounts] = useState<LocalBankAccount[]>([]);
-  const [transactions, setTransactions] = useState<LocalTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<ActiveModal>({ kind: "none" });
 
+  // Deliberately doesn't load the transactions table here — customer "last
+  // entry" comes from the denormalized LocalCustomer.last_transaction_at, and
+  // each transaction modal fetches only its own entity's history on demand
+  // (see CustomerTransactionModal/BankTransactionModal), so this tab stays
+  // fast regardless of how much history the shop has accumulated.
   const reload = useCallback(async () => {
-    const [customerRows, bankRows, transactionRows] = await Promise.all([
-      getCustomers(userId),
-      getBankAccounts(userId),
-      getAllTransactions(userId),
-    ]);
+    const [customerRows, bankRows] = await Promise.all([getCustomers(userId), getBankAccounts(userId)]);
     setCustomers(customerRows);
     setBankAccounts(bankRows);
-    setTransactions(transactionRows);
     setLoading(false);
   }, [userId]);
 
@@ -63,6 +64,7 @@ export default function KhataTab({ userId, shopLabel }: { userId: string; shopLa
       (c) =>
         c.name.toLowerCase().includes(query) ||
         (c.description ?? "").toLowerCase().includes(query) ||
+        (c.phone ?? "").toLowerCase().includes(query) ||
         String(c.current_balance).includes(query)
     );
   }, [customers, query]);
@@ -79,9 +81,24 @@ export default function KhataTab({ userId, shopLabel }: { userId: string; shopLa
   }, [bankAccounts, query]);
 
   const openCustomer =
-    modal.kind === "customer-txn" ? customers.find((c) => c.id === modal.customerId) : undefined;
+    modal.kind === "customer-txn" || modal.kind === "whatsapp"
+      ? customers.find((c) => c.id === modal.customerId)
+      : undefined;
   const openAccount =
     modal.kind === "bank-txn" ? bankAccounts.find((b) => b.id === modal.accountId) : undefined;
+
+  function handleCustomerAdded(customer: LocalCustomer, action: PostAddAction) {
+    reload();
+    if (action === "give") {
+      setModal({ kind: "customer-txn", customerId: customer.id, initialEntryType: "DIYE" });
+    } else if (action === "receive") {
+      setModal({ kind: "customer-txn", customerId: customer.id, initialEntryType: "MILAY" });
+    } else if (action === "whatsapp") {
+      setModal({ kind: "whatsapp", customerId: customer.id });
+    } else {
+      setModal({ kind: "none" });
+    }
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -99,7 +116,6 @@ export default function KhataTab({ userId, shopLabel }: { userId: string; shopLa
             ) : (
               <CustomerList
                 customers={matchedCustomers}
-                transactions={transactions}
                 loading={false}
                 onSelectCustomer={(customer) =>
                   setModal({ kind: "customer-txn", customerId: customer.id })
@@ -126,7 +142,6 @@ export default function KhataTab({ userId, shopLabel }: { userId: string; shopLa
       ) : module === "customers" ? (
         <CustomerList
           customers={customers}
-          transactions={transactions}
           loading={loading}
           onSelectCustomer={(customer) =>
             setModal({ kind: "customer-txn", customerId: customer.id })
@@ -156,22 +171,27 @@ export default function KhataTab({ userId, shopLabel }: { userId: string; shopLa
         <AddCustomerModal
           userId={userId}
           onClose={() => setModal({ kind: "none" })}
-          onAdded={reload}
+          onAdded={handleCustomerAdded}
         />
       )}
       {modal.kind === "customer-txn" && openCustomer && (
         <CustomerTransactionModal
           customer={openCustomer}
           shopLabel={shopLabel}
-          transactions={transactions.filter(
-            (t) => t.entity_type === "customer" && t.entity_id === openCustomer.id
-          )}
+          initialEntryType={modal.initialEntryType}
           onClose={() => setModal({ kind: "none" })}
           onSaved={reload}
           onDeleted={() => {
             setModal({ kind: "none" });
             reload();
           }}
+        />
+      )}
+      {modal.kind === "whatsapp" && openCustomer && (
+        <WhatsAppReminderModal
+          customer={openCustomer}
+          onClose={() => setModal({ kind: "none" })}
+          onSaved={reload}
         />
       )}
       {modal.kind === "add-bank" && (
@@ -184,9 +204,6 @@ export default function KhataTab({ userId, shopLabel }: { userId: string; shopLa
       {modal.kind === "bank-txn" && openAccount && (
         <BankTransactionModal
           account={openAccount}
-          transactions={transactions.filter(
-            (t) => t.entity_type === "bank" && t.entity_id === openAccount.id
-          )}
           onClose={() => setModal({ kind: "none" })}
           onSaved={reload}
           onDeleted={() => {

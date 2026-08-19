@@ -1,4 +1,4 @@
-import type { LineItem } from "@/lib/db/offlineStorage";
+import type { LineItem, LocalItem } from "@/lib/db/offlineStorage";
 
 export function emptyLineItem(): LineItem {
   return { id: crypto.randomUUID(), name: "", quantity: 0, unit: "", pricePerUnit: 0 };
@@ -10,9 +10,12 @@ export function computeItemsTotal(items: LineItem[]): number {
 
 export default function ItemizedEntryFields({
   items,
+  catalogItems,
   onChange,
 }: {
   items: LineItem[];
+  /** Items/Inventory catalog for this shop — lets a row auto-fill name + selling price instead of retyping them. */
+  catalogItems: LocalItem[];
   onChange: (items: LineItem[]) => void;
 }) {
   function updateItem(id: string, patch: Partial<LineItem>) {
@@ -23,70 +26,125 @@ export default function ItemizedEntryFields({
     onChange(items.filter((item) => item.id !== id));
   }
 
+  function handleCatalogSelect(id: string, catalogId: string) {
+    if (!catalogId) {
+      updateItem(id, { itemId: undefined });
+      return;
+    }
+    const catalogItem = catalogItems.find((c) => c.id === catalogId);
+    if (!catalogItem) return;
+    const current = items.find((item) => item.id === id);
+    updateItem(id, {
+      itemId: catalogItem.id,
+      name: catalogItem.name,
+      pricePerUnit: catalogItem.selling_price ?? 0,
+      quantity: current?.quantity || 1,
+    });
+  }
+
   return (
     <div className="flex flex-col gap-3">
-      {items.map((item) => (
-        <div
-          key={item.id}
-          className="flex flex-col gap-2 rounded-xl border border-brand-charcoal p-3"
-        >
-          <div className="flex items-center gap-2">
-            <input
-              value={item.name}
-              onChange={(e) => updateItem(item.id, { name: e.target.value })}
-              placeholder="Item name, e.g. Rice"
-              aria-label="Item name"
-              className="min-h-tap min-w-0 flex-1 rounded-lg border border-brand-charcoal bg-transparent px-3 text-senior-sm text-brand-white placeholder:text-brand-white/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
-            />
-            <button
-              type="button"
-              onClick={() => removeItem(item.id)}
-              aria-label="Remove item"
-              className="flex min-h-tap min-w-tap shrink-0 items-center justify-center rounded-lg text-senior-base text-brand-white/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
-            >
-              🗑️
-            </button>
+      {items.map((item) => {
+        const catalogItem = item.itemId ? catalogItems.find((c) => c.id === item.itemId) : undefined;
+        const overStock = Boolean(catalogItem && item.quantity > catalogItem.stock_quantity);
+
+        return (
+          <div
+            key={item.id}
+            className="flex flex-col gap-2 rounded-xl border border-brand-charcoal p-3"
+          >
+            <div className="flex items-center gap-2">
+              {catalogItems.length > 0 ? (
+                <select
+                  value={item.itemId ?? ""}
+                  onChange={(e) => handleCatalogSelect(item.id, e.target.value)}
+                  aria-label="Choose item from catalog"
+                  className="min-h-tap min-w-0 flex-1 rounded-lg border border-brand-charcoal bg-brand-black px-3 text-senior-sm text-brand-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
+                >
+                  <option value="">— Type item manually —</option>
+                  {catalogItems.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                      {c.selling_price != null ? ` (Rs. ${c.selling_price})` : ""}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  value={item.name}
+                  onChange={(e) => updateItem(item.id, { name: e.target.value })}
+                  placeholder="Item name, e.g. Rice"
+                  aria-label="Item name"
+                  className="min-h-tap min-w-0 flex-1 rounded-lg border border-brand-charcoal bg-transparent px-3 text-senior-sm text-brand-white placeholder:text-brand-white/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
+                />
+              )}
+              <button
+                type="button"
+                onClick={() => removeItem(item.id)}
+                aria-label="Remove item"
+                className="flex min-h-tap min-w-tap shrink-0 items-center justify-center rounded-lg text-senior-base text-brand-white/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
+              >
+                🗑️
+              </button>
+            </div>
+
+            {catalogItems.length > 0 && !item.itemId && (
+              <input
+                value={item.name}
+                onChange={(e) => updateItem(item.id, { name: e.target.value })}
+                placeholder="Item name, e.g. Rice"
+                aria-label="Item name"
+                className="min-h-tap min-w-0 rounded-lg border border-brand-charcoal bg-transparent px-3 text-senior-sm text-brand-white placeholder:text-brand-white/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
+              />
+            )}
+
+            <div className="flex gap-2">
+              <input
+                value={item.quantity || ""}
+                onChange={(e) => updateItem(item.id, { quantity: Number(e.target.value) || 0 })}
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="0.01"
+                placeholder="Qty"
+                aria-label="Quantity"
+                className="min-h-tap w-0 flex-1 rounded-lg border border-brand-charcoal bg-transparent px-2 text-senior-sm text-brand-white placeholder:text-brand-white/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
+              />
+              <input
+                value={item.unit ?? ""}
+                onChange={(e) => updateItem(item.id, { unit: e.target.value })}
+                placeholder="Unit, e.g. kg"
+                aria-label="Unit"
+                className="min-h-tap w-0 flex-1 rounded-lg border border-brand-charcoal bg-transparent px-2 text-senior-sm text-brand-white placeholder:text-brand-white/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
+              />
+              <input
+                value={item.pricePerUnit || ""}
+                onChange={(e) =>
+                  updateItem(item.id, { pricePerUnit: Number(e.target.value) || 0 })
+                }
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="0.01"
+                placeholder="Price/unit"
+                aria-label="Price per unit"
+                className="min-h-tap w-0 flex-1 rounded-lg border border-brand-charcoal bg-transparent px-2 text-senior-sm text-brand-white placeholder:text-brand-white/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
+              />
+            </div>
+
+            {item.quantity > 0 && item.pricePerUnit > 0 && (
+              <p className="text-senior-xs text-brand-white/60">
+                Line total: {(item.quantity * item.pricePerUnit).toLocaleString("en-PK")}
+              </p>
+            )}
+            {overStock && catalogItem && (
+              <p className="text-senior-xs font-medium text-brand-red">
+                Only {catalogItem.stock_quantity} in stock — saving will take stock negative.
+              </p>
+            )}
           </div>
-          <div className="flex gap-2">
-            <input
-              value={item.quantity || ""}
-              onChange={(e) => updateItem(item.id, { quantity: Number(e.target.value) || 0 })}
-              type="number"
-              inputMode="decimal"
-              min="0"
-              step="0.01"
-              placeholder="Qty"
-              aria-label="Quantity"
-              className="min-h-tap w-0 flex-1 rounded-lg border border-brand-charcoal bg-transparent px-2 text-senior-sm text-brand-white placeholder:text-brand-white/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
-            />
-            <input
-              value={item.unit ?? ""}
-              onChange={(e) => updateItem(item.id, { unit: e.target.value })}
-              placeholder="Unit, e.g. kg"
-              aria-label="Unit"
-              className="min-h-tap w-0 flex-1 rounded-lg border border-brand-charcoal bg-transparent px-2 text-senior-sm text-brand-white placeholder:text-brand-white/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
-            />
-            <input
-              value={item.pricePerUnit || ""}
-              onChange={(e) =>
-                updateItem(item.id, { pricePerUnit: Number(e.target.value) || 0 })
-              }
-              type="number"
-              inputMode="decimal"
-              min="0"
-              step="0.01"
-              placeholder="Price/unit"
-              aria-label="Price per unit"
-              className="min-h-tap w-0 flex-1 rounded-lg border border-brand-charcoal bg-transparent px-2 text-senior-sm text-brand-white placeholder:text-brand-white/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-white"
-            />
-          </div>
-          {item.quantity > 0 && item.pricePerUnit > 0 && (
-            <p className="text-senior-xs text-brand-white/60">
-              Line total: {(item.quantity * item.pricePerUnit).toLocaleString("en-PK")}
-            </p>
-          )}
-        </div>
-      ))}
+        );
+      })}
 
       <button
         type="button"

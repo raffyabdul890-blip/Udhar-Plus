@@ -20,6 +20,22 @@ export function buildWhatsAppUrl(formattedNumber: string, message: string): stri
   return `https://wa.me/${formattedNumber}?text=${encodeURIComponent(message)}`;
 }
 
+/** Itemized sale receipt (e.g. "Milk x2 — Rs. 400") for the post-save WhatsApp share. */
+export function buildItemizedReceiptMessage(
+  customerName: string,
+  items: { name: string; quantity: number; unit?: string; pricePerUnit: number }[],
+  total: number,
+  balanceAfter: number
+): string {
+  const lines = items.map((item) => {
+    const qty = item.unit ? `${item.quantity} ${item.unit}` : `${item.quantity}`;
+    return `${item.name || "Item"} x${qty} — Rs. ${(item.quantity * item.pricePerUnit).toLocaleString("en-PK")}`;
+  });
+  return `Assalam-o-Alaikum ${customerName},\n\nAap ki transaction:\n${lines.join("\n")}\n\nTotal: Rs. ${total.toLocaleString(
+    "en-PK"
+  )}\nCurrent balance: Rs. ${balanceAfter.toLocaleString("en-PK")}\n\nShukriya!`;
+}
+
 /** Full ledger summary (last few entries + net balance) for the Export Summary modal. */
 export function buildLedgerSummaryMessage(
   shopLabel: string,

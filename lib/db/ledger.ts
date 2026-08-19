@@ -3,8 +3,11 @@ import {
   deleteBankAccount,
   deleteCustomer,
   deleteTransaction,
+  getItem,
+  getTransactionsForEntity,
   updateBankAccount,
   updateCustomer,
+  updateItem,
   updateTransaction,
   type LineItem,
   type LocalBankAccount,
@@ -16,6 +19,38 @@ export interface CustomerEntryFields {
   note?: string;
   items?: LineItem[];
   photoId?: string;
+}
+
+/**
+ * Itemized "Diye" (OUT) entries represent goods leaving the shop, so their
+ * catalog-linked lines decrement stock; sign=1 reverses that (edit/delete).
+ * Applied as an absolute stock_quantity write (not a server-side increment),
+ * matching how current_balance already syncs — safe to re-push on retry since
+ * it's idempotent, and never double-applies since each caller here runs it
+ * exactly once per transaction write. Missing/deleted catalog items are
+ * skipped rather than throwing — nothing to adjust.
+ */
+async function applyStockDelta(
+  userId: string,
+  items: LineItem[] | undefined,
+  sign: 1 | -1
+): Promise<void> {
+  if (!items?.length) return;
+  for (const line of items) {
+    if (!line.itemId || !line.quantity) continue;
+    const item = await getItem(line.itemId);
+    if (!item || item.user_id !== userId) continue;
+    await updateItem(item.id, { stock_quantity: item.stock_quantity + sign * line.quantity });
+  }
+}
+
+/** Recomputes the denormalized last_transaction_at from this customer's own (indexed) history. */
+async function latestTransactionDate(customerId: string): Promise<string | undefined> {
+  const related = await getTransactionsForEntity("customer", customerId);
+  return related.reduce<string | undefined>(
+    (max, t) => (!max || t.transaction_date > max ? t.transaction_date : max),
+    undefined
+  );
 }
 
 /**
@@ -44,14 +79,26 @@ export async function recordCustomerTransaction(
     transaction_date: transactionDate,
   });
 
+  if (type === "OUT") {
+    await applyStockDelta(customer.user_id, fields.items, -1);
+  }
+
+  const latest =
+    !customer.last_transaction_at || transactionDate > customer.last_transaction_at
+      ? transactionDate
+      : customer.last_transaction_at;
+
   await updateCustomer(customer.id, {
     current_balance: customer.current_balance + delta,
+    last_transaction_at: latest,
   });
 }
 
 /**
  * Overwrites an existing customer entry in place and reconciles the running
  * balance: reverses the original entry's effect, then applies the new one.
+ * Stock is reconciled the same way — restore whatever the original itemized
+ * OUT entry consumed, then re-apply whatever the edited entry now consumes.
  */
 export async function updateCustomerTransactionEntry(
   customer: LocalCustomer,
@@ -64,6 +111,13 @@ export async function updateCustomerTransactionEntry(
   const reverseOriginal = original.type === "OUT" ? -original.amount : original.amount;
   const applyNew = type === "OUT" ? amount : -amount;
 
+  if (original.type === "OUT") {
+    await applyStockDelta(customer.user_id, original.items, 1);
+  }
+  if (type === "OUT") {
+    await applyStockDelta(customer.user_id, fields.items, -1);
+  }
+
   await updateTransaction(original.id, {
     type,
     amount,
@@ -75,6 +129,7 @@ export async function updateCustomerTransactionEntry(
 
   await updateCustomer(customer.id, {
     current_balance: customer.current_balance + reverseOriginal + applyNew,
+    last_transaction_at: await latestTransactionDate(customer.id),
   });
 }
 
@@ -118,16 +173,21 @@ export async function recordBankTransaction(
   });
 }
 
-/** Deletes one customer entry and reverses its effect on the running balance. */
+/** Deletes one customer entry and reverses its effect on the running balance and stock. */
 export async function deleteCustomerTransactionEntry(
   customer: LocalCustomer,
   transaction: LocalTransaction
 ): Promise<void> {
   const reverseDelta = transaction.type === "OUT" ? -transaction.amount : transaction.amount;
 
+  if (transaction.type === "OUT") {
+    await applyStockDelta(customer.user_id, transaction.items, 1);
+  }
+
   await deleteTransaction(transaction.id, customer.user_id);
   await updateCustomer(customer.id, {
     current_balance: customer.current_balance + reverseDelta,
+    last_transaction_at: await latestTransactionDate(customer.id),
   });
 }
 
