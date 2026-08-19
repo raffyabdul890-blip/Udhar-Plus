@@ -226,6 +226,14 @@ create table if not exists public.cashbook_entries (
   created_at timestamptz not null default now()
 );
 
+-- Phase 4: Expenses is a lens over cashbook_entries (type='OUT' + is_expense),
+-- not a separate table — one source of truth, no duplicate-entry risk.
+-- payment_method distinguishes real cash movements (which affect the
+-- Cashbook's cash balance) from bank/wallet expenses (which don't).
+alter table public.cashbook_entries add column if not exists is_expense boolean not null default false;
+alter table public.cashbook_entries add column if not exists payment_method text not null default 'cash'
+  check (payment_method in ('cash', 'bank', 'wallet'));
+
 create index if not exists cashbook_entries_user_id_idx on public.cashbook_entries (user_id);
 create index if not exists cashbook_entries_date_idx on public.cashbook_entries (entry_date);
 

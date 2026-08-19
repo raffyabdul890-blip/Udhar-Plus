@@ -134,6 +134,9 @@ export async function syncPendingRecords(userId: string): Promise<void> {
         amount: entry.amount,
         category: entry.category,
         note: entry.note ?? null,
+        is_expense: entry.is_expense ?? false,
+        payment_method: entry.payment_method ?? "cash",
+        // photo_id is deliberately omitted — same reasoning as transaction photos.
         entry_date: entry.entry_date,
         created_at: entry.created_at,
       });

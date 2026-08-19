@@ -56,7 +56,7 @@ export default function DashboardShell({
           {activeTab === "khata" && <KhataTab userId={userId} shopLabel={primaryLabel} />}
           {activeTab === "cashbook" && <CashbookTab userId={userId} />}
           {activeTab === "items" && <ItemsTab userId={userId} />}
-          {activeTab === "reports" && <ReportsTab userId={userId} />}
+          {activeTab === "reports" && <ReportsTab userId={userId} shopLabel={primaryLabel} />}
           {activeTab === "more" && <MoreTab userId={userId} />}
         </div>
       </div>

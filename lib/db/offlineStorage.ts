@@ -93,6 +93,22 @@ export interface CashbookEntry {
   amount: number;
   category: string;
   note?: string;
+  /**
+   * True when recorded via the Expense flow — distinguishes real business
+   * expenses (Rent, Electricity...) from other cash-out movements (Bank
+   * Deposit, ad-hoc Stock Purchase) for Reports' expense totals. Not inferred
+   * from category text, since categories overlap between the two flows.
+   */
+  is_expense?: boolean;
+  /**
+   * Defaults to "cash" when absent (all pre-existing entries). Only "cash"
+   * entries count toward the Cashbook's cash balance/history — a bank or
+   * wallet expense is real spending (counts in Reports) but never touched
+   * physical cash, so it must not reduce the cash total.
+   */
+  payment_method?: "cash" | "bank" | "wallet";
+  /** References `photos.id` — local-only, never synced (same convention as transaction photos). */
+  photo_id?: string;
   entry_date: string;
   created_at: string;
   synced: boolean;
@@ -429,6 +445,13 @@ export async function addCashbookEntry(
   };
   await requireDb().cashbookEntries.put(record);
   return record;
+}
+
+export async function updateCashbookEntry(
+  id: string,
+  changes: Partial<Omit<CashbookEntry, "id" | "user_id" | "created_at">>
+): Promise<void> {
+  await requireDb().cashbookEntries.update(id, { ...changes, synced: false });
 }
 
 export async function deleteCashbookEntry(id: string, userId: string): Promise<void> {
