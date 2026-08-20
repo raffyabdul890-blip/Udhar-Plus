@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type SubmitEvent } from "react";
 import Modal from "@/components/ui/Modal";
 import TextField from "@/components/ui/TextField";
 import Button from "@/components/ui/Button";
@@ -35,7 +35,7 @@ export default function AddItemModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
     setError(null);
 
@@ -127,7 +127,7 @@ export default function AddItemModal({
           </p>
         )}
 
-        <Button type="submit" loading={saving} fullWidth>
+        <Button type="submit" loading={saving} fullWidth className="sticky bottom-0 bg-surface">
           Save Item
         </Button>
 

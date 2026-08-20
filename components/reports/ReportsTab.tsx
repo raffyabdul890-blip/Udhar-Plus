@@ -11,10 +11,10 @@ import BankTransactionModal from "@/components/bank/BankTransactionModal";
 import BankLogoBadge from "@/components/bank/BankLogoBadge";
 import { getFinancialInstitution } from "@/lib/constants/banks";
 import {
-  getAllTransactions,
   getBankAccounts,
   getCashbookEntries,
   getCustomers,
+  getRecentTransactions,
   type CashbookEntry,
   type LocalBankAccount,
   type LocalCustomer,
@@ -74,10 +74,21 @@ export default function ReportsTab({ userId, shopLabel }: { userId: string; shop
   const [openCustomerId, setOpenCustomerId] = useState<string | null>(null);
   const [openAccountId, setOpenAccountId] = useState<string | null>(null);
 
+  const range = useMemo(() => resolveDateRange(datePreset, customRange), [datePreset, customRange]);
+
+  // Transactions are bounded to the selected range's start via the same
+  // indexed query Dashboard/Sales use, instead of pulling a shop's entire
+  // Khata history just to filter it down client-side for the Sales &
+  // Expenses section — re-fetches whenever the date filter changes, so
+  // "custom" ranges reaching further back still load correctly. Cashbook
+  // entries and customers stay full fetches: Receivable/Payable/Cash/Liquid
+  // Balance are always-current figures (not range-filtered), and Cashbook
+  // has no denormalized running balance to query against directly (see
+  // DashboardHome's identical reasoning).
   const reload = useCallback(async () => {
     const [customerRows, transactionRows, cashbookRows, bankRows] = await Promise.all([
       getCustomers(userId),
-      getAllTransactions(userId),
+      getRecentTransactions(userId, range.start.toISOString()),
       getCashbookEntries(userId),
       getBankAccounts(userId),
     ]);
@@ -86,7 +97,7 @@ export default function ReportsTab({ userId, shopLabel }: { userId: string; shop
     setCashbookEntries(cashbookRows);
     setBankAccounts(bankRows);
     setLoading(false);
-  }, [userId]);
+  }, [userId, range]);
 
   useEffect(() => {
     // Synchronizing with IndexedDB (an external store), not deriving state from props —
@@ -94,8 +105,6 @@ export default function ReportsTab({ userId, shopLabel }: { userId: string; shop
     // eslint-disable-next-line react-hooks/set-state-in-effect
     reload();
   }, [reload]);
-
-  const range = useMemo(() => resolveDateRange(datePreset, customRange), [datePreset, customRange]);
 
   // ---- Money (always-current, like Receivable/Payable — not range-filtered) ----
   const totalReceivable = customers.reduce((sum, c) => sum + Math.max(c.current_balance, 0), 0);

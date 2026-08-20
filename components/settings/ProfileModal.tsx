@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type SubmitEvent } from "react";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/ui/Modal";
 import TextField from "@/components/ui/TextField";
@@ -54,7 +54,7 @@ export default function ProfileModal({
       });
   }, []);
 
-  async function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
     setSaving(true);
 
@@ -156,7 +156,7 @@ export default function ProfileModal({
           )}
         </section>
 
-        <Button type="submit" loading={saving} fullWidth>
+        <Button type="submit" loading={saving} fullWidth className="sticky bottom-0 bg-surface">
           {t("common.saveChanges")}
         </Button>
       </form>

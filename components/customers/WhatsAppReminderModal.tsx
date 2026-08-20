@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type SubmitEvent } from "react";
 import Modal from "@/components/ui/Modal";
 import TextField from "@/components/ui/TextField";
 import Button from "@/components/ui/Button";
@@ -33,7 +33,7 @@ export default function WhatsAppReminderModal({
   );
   const [error, setError] = useState<string | null>(null);
 
-  async function handleOpenWhatsApp(event: FormEvent) {
+  async function handleOpenWhatsApp(event: SubmitEvent) {
     event.preventDefault();
     setError(null);
 
@@ -86,7 +86,7 @@ export default function WhatsAppReminderModal({
           </p>
         )}
 
-        <Button type="submit" icon="whatsapp" fullWidth>
+        <Button type="submit" icon="whatsapp" fullWidth className="sticky bottom-0 bg-surface">
           Open WhatsApp
         </Button>
       </form>

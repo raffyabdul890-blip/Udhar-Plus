@@ -51,7 +51,7 @@ export default function PickCustomerModal({
         ) : (
           <ul className="flex max-h-96 flex-col gap-2 overflow-y-auto">
             {filtered.map((customer) => (
-              <li key={customer.id}>
+              <li key={customer.id} className="[content-visibility:auto] [contain-intrinsic-size:auto_72px]">
                 <button
                   type="button"
                   onClick={() => onPick(customer)}

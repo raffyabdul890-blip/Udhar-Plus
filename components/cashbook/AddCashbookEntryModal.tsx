@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type SubmitEvent } from "react";
 import Modal from "@/components/ui/Modal";
 import TextField from "@/components/ui/TextField";
 import SegmentedControl from "@/components/ui/SegmentedControl";
@@ -70,7 +70,7 @@ export default function AddCashbookEntryModal({
   );
   const ctaVariant = isExpense || type === "OUT" ? "warning" : "success";
 
-  async function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
     setError(null);
 
@@ -234,7 +234,7 @@ export default function AddCashbookEntryModal({
           </p>
         )}
 
-        <Button type="submit" variant={ctaVariant} loading={saving} fullWidth>
+        <Button type="submit" variant={ctaVariant} loading={saving} fullWidth className="sticky bottom-0 bg-surface">
           {existing ? "Update entry" : "Save entry"}
         </Button>
 

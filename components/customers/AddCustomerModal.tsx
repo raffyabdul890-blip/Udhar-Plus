@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type SubmitEvent } from "react";
 import Modal from "@/components/ui/Modal";
 import TextField from "@/components/ui/TextField";
 import SegmentedControl from "@/components/ui/SegmentedControl";
@@ -53,7 +53,7 @@ export default function AddCustomerModal({
     }
   }
 
-  async function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
     setError(null);
 
@@ -211,7 +211,7 @@ export default function AddCustomerModal({
           </p>
         )}
 
-        <Button type="submit" loading={saving} fullWidth>
+        <Button type="submit" loading={saving} fullWidth className="sticky bottom-0 bg-surface">
           {isEditing ? t("customer.saveChanges") : t("customer.saveCustomer")}
         </Button>
       </form>

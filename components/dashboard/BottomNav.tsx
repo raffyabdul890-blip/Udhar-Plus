@@ -34,7 +34,7 @@ export default function BottomNav({
   return (
     <nav
       aria-label={t("nav.main")}
-      className="fixed inset-x-0 bottom-0 z-20 mx-auto flex max-w-md border-t border-border bg-surface/95 backdrop-blur lg:hidden relative"
+      className="fixed inset-x-0 bottom-0 z-20 mx-auto flex max-w-md gap-1 border-t border-border bg-surface/95 backdrop-blur lg:hidden relative"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <div
@@ -50,14 +50,14 @@ export default function BottomNav({
             type="button"
             onClick={() => onChange(tab.id)}
             aria-current={selected ? "page" : undefined}
-            className="flex min-h-tap flex-1 flex-col items-center justify-center gap-0.5 py-2.5 text-senior-xs font-bold transition-colors"
+            className="flex min-h-tap flex-1 flex-col items-center justify-center gap-0.5 py-2 text-senior-xs font-bold transition-colors"
           >
             <span
-              className={`flex items-center justify-center rounded-full px-3 py-1 transition-all duration-200 ${
+              className={`flex items-center justify-center rounded-full px-2.5 py-0.5 transition-all duration-200 ${
                 selected ? "bg-primary-light text-primary" : "text-ink-tertiary"
               }`}
             >
-              <Icon name={tab.icon} size={21} />
+              <Icon name={tab.icon} size={19} />
             </span>
             <span className={selected ? "text-primary" : "text-ink-tertiary"}>{t(`nav.${tab.id}`)}</span>
           </button>

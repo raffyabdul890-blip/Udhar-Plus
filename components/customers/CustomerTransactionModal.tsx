@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type SubmitEvent } from "react";
 import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import TextField from "@/components/ui/TextField";
@@ -176,7 +176,7 @@ export default function CustomerTransactionModal({
     setStage("form");
   }
 
-  async function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
     setError(null);
     const transactionDate = fromDatetimeLocalValue(dateValue);
@@ -770,6 +770,7 @@ export default function CustomerTransactionModal({
             variant={entryType === "MILAY" ? "success" : entryType === "SETTLE" ? "primary" : "warning"}
             loading={saving}
             fullWidth
+            className="sticky bottom-0 bg-surface"
           >
             {editingTransaction
               ? t("transaction.updateEntry")

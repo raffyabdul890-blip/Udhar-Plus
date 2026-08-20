@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type SubmitEvent } from "react";
 import Modal from "@/components/ui/Modal";
 import TextField from "@/components/ui/TextField";
 import Button from "@/components/ui/Button";
@@ -34,7 +34,7 @@ export default function AddBankAccountModal({
     FINANCIAL_INSTITUTIONS.find((institution) => institution.code === bankCode) ??
     PAKISTANI_BANKS[0];
 
-  async function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
     setError(null);
 
@@ -114,7 +114,7 @@ export default function AddBankAccountModal({
           </p>
         )}
 
-        <Button type="submit" loading={saving} fullWidth>
+        <Button type="submit" loading={saving} fullWidth className="sticky bottom-0 bg-surface">
           Save Account
         </Button>
       </form>

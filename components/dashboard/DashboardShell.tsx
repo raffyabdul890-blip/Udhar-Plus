@@ -72,7 +72,7 @@ export default function DashboardShell({
           className="sticky top-0 z-10 bg-canvas/95 px-4 pb-3 backdrop-blur lg:static lg:bg-transparent lg:pt-6"
           style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}
         >
-          <TopNavbar primaryLabel={primaryLabel} sectionTitle={sectionTitle} />
+          <TopNavbar sectionTitle={sectionTitle} />
           <OfflineBanner />
         </div>
 

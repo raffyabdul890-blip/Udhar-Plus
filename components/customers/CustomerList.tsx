@@ -45,7 +45,11 @@ export default function CustomerList({
       {customers.map((customer, index) => {
         const lastEntry = customer.last_transaction_at;
         return (
-          <li key={customer.id} style={{ animationDelay: `${Math.min(index, 8) * 30}ms` }} className="animate-fade-in-up">
+          <li
+            key={customer.id}
+            style={{ animationDelay: `${Math.min(index, 8) * 30}ms` }}
+            className="animate-fade-in-up [content-visibility:auto] [contain-intrinsic-size:auto_88px]"
+          >
             <button
               type="button"
               onClick={() => onSelectCustomer(customer)}

@@ -11,8 +11,8 @@ import PickCustomerModal from "@/components/customers/PickCustomerModal";
 import AddCustomerModal from "@/components/customers/AddCustomerModal";
 import CustomerTransactionModal from "@/components/customers/CustomerTransactionModal";
 import {
-  getAllTransactions,
   getCustomers,
+  getRecentTransactions,
   type LocalCustomer,
   type LocalTransaction,
 } from "@/lib/db/offlineStorage";
@@ -43,15 +43,22 @@ export default function SalesTab({ userId, shopLabel }: { userId: string; shopLa
   const [customRange, setCustomRange] = useState({ start: "", end: "" });
   const [modal, setModal] = useState<ActiveModal>({ kind: "none" });
 
+  const range = useMemo(() => resolveDateRange(datePreset, customRange), [datePreset, customRange]);
+
+  // Bounded to exactly the selected range's start via the same indexed query
+  // Dashboard uses, instead of pulling a shop's entire Khata history just to
+  // filter it down client-side — re-fetches whenever the date filter changes,
+  // so "custom" ranges reaching further back still load correctly (unlike a
+  // fixed rolling window, this can never under-fetch for the chosen range).
   const reload = useCallback(async () => {
     const [customerRows, transactionRows] = await Promise.all([
       getCustomers(userId),
-      getAllTransactions(userId),
+      getRecentTransactions(userId, range.start.toISOString()),
     ]);
     setCustomers(customerRows);
     setTransactions(transactionRows);
     setLoading(false);
-  }, [userId]);
+  }, [userId, range]);
 
   useEffect(() => {
     // Synchronizing with IndexedDB (an external store), not deriving state from props —
@@ -60,7 +67,6 @@ export default function SalesTab({ userId, shopLabel }: { userId: string; shopLa
     reload();
   }, [reload]);
 
-  const range = useMemo(() => resolveDateRange(datePreset, customRange), [datePreset, customRange]);
   const customerById = useMemo(() => new Map(customers.map((c) => [c.id, c])), [customers]);
 
   const sales = useMemo(

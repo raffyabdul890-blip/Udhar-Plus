@@ -227,7 +227,7 @@ export default function CashbookTab({
           ) : (
             <ul className="flex flex-col gap-2">
               {cashHistory.map(({ entry, balance }) => (
-                <li key={entry.id}>
+                <li key={entry.id} className="[content-visibility:auto] [contain-intrinsic-size:auto_72px]">
                   <button
                     type="button"
                     onClick={() => setModal({ kind: "edit", entry })}
@@ -316,7 +316,7 @@ export default function CashbookTab({
           ) : (
             <ul className="flex flex-col gap-2">
               {expensesInRange.map((entry) => (
-                <li key={entry.id}>
+                <li key={entry.id} className="[content-visibility:auto] [contain-intrinsic-size:auto_72px]">
                   <button
                     type="button"
                     onClick={() => setModal({ kind: "edit", entry })}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type SubmitEvent } from "react";
 import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import TextField from "@/components/ui/TextField";
@@ -117,7 +117,7 @@ export default function BankTransactionModal({
     setError(null);
   }
 
-  async function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
     setError(null);
 
@@ -233,7 +233,7 @@ export default function BankTransactionModal({
           </p>
         )}
 
-        <Button type="submit" variant={type === "IN" ? "success" : "warning"} loading={saving} fullWidth>
+        <Button type="submit" variant={type === "IN" ? "success" : "warning"} loading={saving} fullWidth className="sticky bottom-0 bg-surface">
           {editingTransaction ? "Update entry" : "Save entry"}
         </Button>
 

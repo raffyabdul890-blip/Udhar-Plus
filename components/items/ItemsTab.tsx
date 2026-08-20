@@ -65,7 +65,7 @@ export default function ItemsTab({ userId }: { userId: string }) {
                 const threshold = item.low_stock_threshold ?? DEFAULT_LOW_STOCK_THRESHOLD;
                 const lowStock = item.stock_quantity <= threshold;
                 return (
-                  <li key={item.id}>
+                  <li key={item.id} className="[content-visibility:auto] [contain-intrinsic-size:auto_112px]">
                     <button
                       type="button"
                       onClick={() => setModal({ kind: "edit", item })}

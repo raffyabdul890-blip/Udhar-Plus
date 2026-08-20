@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type SubmitEvent } from "react";
 import { useRouter } from "next/navigation";
 import { RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from "firebase/auth";
 import TextField from "@/components/ui/TextField";
@@ -77,7 +77,7 @@ export default function LoginPage() {
     return true;
   }
 
-  async function handleSendOtp(event: FormEvent) {
+  async function handleSendOtp(event: SubmitEvent) {
     event.preventDefault();
     setError(null);
 
@@ -150,7 +150,7 @@ export default function LoginPage() {
     router.refresh();
   }
 
-  async function handleVerifyOtp(event: FormEvent) {
+  async function handleVerifyOtp(event: SubmitEvent) {
     event.preventDefault();
     setError(null);
 
@@ -222,7 +222,7 @@ export default function LoginPage() {
                   Mobile number
                 </label>
                 <div className="flex items-stretch gap-2">
-                  <span className="flex min-h-tap items-center rounded-xl border border-border bg-surface-alt px-4 text-senior-base font-medium text-ink">
+                  <span className="flex min-h-tap shrink-0 items-center rounded-xl border border-border bg-surface-alt px-4 text-senior-base font-medium text-ink">
                     {PK_COUNTRY_CODE}
                   </span>
                   <input
@@ -232,7 +232,7 @@ export default function LoginPage() {
                     autoComplete="tel-national"
                     value={phoneDigits}
                     onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                    className="min-h-tap flex-1 rounded-xl border border-border bg-surface px-4 text-senior-base text-ink placeholder:text-ink-tertiary focus-visible:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    className="min-h-tap min-w-0 flex-1 rounded-xl border border-border bg-surface px-4 text-senior-base text-ink placeholder:text-ink-tertiary focus-visible:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   />
                 </div>
               </div>

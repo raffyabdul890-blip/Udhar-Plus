@@ -15,11 +15,11 @@ export default function EmptyState({
   onAction?: () => void;
 }) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-surface px-6 py-10 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-light text-primary">
-        <Icon name={icon} size={26} />
+    <div className="flex flex-col items-center gap-2.5 rounded-2xl border border-border bg-surface px-5 py-7 text-center">
+      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-light text-primary">
+        <Icon name={icon} size={20} />
       </div>
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-0.5">
         <p className="text-senior-base font-bold text-ink">{title}</p>
         {description && <p className="text-senior-sm text-ink-secondary">{description}</p>}
       </div>
