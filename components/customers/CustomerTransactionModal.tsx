@@ -12,6 +12,7 @@ import Icon from "@/components/icons/Icon";
 import { useToast } from "@/components/ui/ToastProvider";
 import WhatsAppReminderModal from "@/components/customers/WhatsAppReminderModal";
 import ExportSummaryModal from "@/components/customers/ExportSummaryModal";
+import AddCustomerModal from "@/components/customers/AddCustomerModal";
 import ItemizedEntryFields, {
   computeItemsTotal,
 } from "@/components/customers/ItemizedEntryFields";
@@ -31,7 +32,7 @@ import {
 } from "@/lib/utils/datetime";
 import { buildLedgerRows } from "@/lib/ledgerRows";
 import { downloadCanvasAsPng, renderBillCanvas } from "@/lib/canvasBill";
-import { buildItemizedReceiptMessage } from "@/lib/whatsapp";
+import { buildItemizedReceiptMessage, buildReminderMessage } from "@/lib/whatsapp";
 import { getFinancialInstitution } from "@/lib/constants/banks";
 import { selectClassName } from "@/components/ui/TextField";
 import {
@@ -56,6 +57,7 @@ type ReceiptState = {
   type: "IN" | "OUT";
   balanceAfter: number;
 } | null;
+type SavedEntryState = { type: "IN" | "OUT"; amount: number; balanceAfter: number } | null;
 
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString("en-PK", {
@@ -106,8 +108,11 @@ export default function CustomerTransactionModal({
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const [showReminder, setShowReminder] = useState(false);
   const [showExportSummary, setShowExportSummary] = useState(false);
+  const [showEditCustomer, setShowEditCustomer] = useState(false);
   const [receipt, setReceipt] = useState<ReceiptState>(null);
   const [showReceiptWhatsApp, setShowReceiptWhatsApp] = useState(false);
+  const [savedEntry, setSavedEntry] = useState<SavedEntryState>(null);
+  const [showSavedEntryWhatsApp, setShowSavedEntryWhatsApp] = useState(false);
 
   // Scoped to this one customer via the [entity_type+entity_id] index — not the
   // whole transactions table — so opening this modal stays fast regardless of
@@ -250,7 +255,15 @@ export default function CustomerTransactionModal({
       return;
     }
 
-    showToast(wasEditing ? "Entry updated" : entryType === "DIYE" ? "Udhaar saved" : "Payment received");
+    if (!wasEditing) {
+      const balanceAfter =
+        type === "OUT" ? customer.current_balance + parsedAmount : customer.current_balance - parsedAmount;
+      setSavedEntry({ type, amount: parsedAmount, balanceAfter });
+      resetForm();
+      return;
+    }
+
+    showToast("Entry updated");
     resetForm();
     onClose();
   }
@@ -376,6 +389,75 @@ export default function CustomerTransactionModal({
     );
   }
 
+  if (savedEntry) {
+    const isGiven = savedEntry.type === "OUT";
+    return (
+      <Modal title={isGiven ? "Udhaar Saved" : "Payment Received"} onClose={onClose}>
+        <div className="flex animate-fade-in-up flex-col items-center gap-4 text-center">
+          <span
+            className={`flex h-14 w-14 items-center justify-center rounded-full ${
+              isGiven ? "bg-warning-light text-warning" : "bg-success-light text-success-dark"
+            }`}
+          >
+            <Icon name="check-circle" size={30} />
+          </span>
+          <Amount
+            value={savedEntry.amount}
+            className={`text-senior-3xl font-bold ${isGiven ? "text-warning" : "text-success-dark"}`}
+          />
+          <p className="text-senior-sm text-ink-secondary">
+            Balance updated — {customer.name} now{" "}
+            {savedEntry.balanceAfter > 0
+              ? `owes Rs. ${savedEntry.balanceAfter.toLocaleString("en-PK")}`
+              : savedEntry.balanceAfter < 0
+                ? `is owed Rs. ${Math.abs(savedEntry.balanceAfter).toLocaleString("en-PK")}`
+                : "is settled"}
+          </p>
+
+          <div className="flex w-full flex-col gap-3">
+            <Button
+              variant="success"
+              icon="whatsapp"
+              fullWidth
+              onClick={() => setShowSavedEntryWhatsApp(true)}
+              disabled={!customer.phone}
+            >
+              Send WhatsApp
+            </Button>
+            {!customer.phone && (
+              <p className="text-senior-xs text-ink-secondary">
+                Add a phone number to notify this customer on WhatsApp.
+              </p>
+            )}
+            <Button
+              variant="ghost"
+              fullWidth
+              onClick={() => {
+                setSavedEntry(null);
+                onClose();
+              }}
+            >
+              Done
+            </Button>
+          </div>
+        </div>
+
+        {showSavedEntryWhatsApp && (
+          <WhatsAppReminderModal
+            customer={customer}
+            presetMessage={buildReminderMessage(customer.name, savedEntry.balanceAfter)}
+            onClose={() => {
+              setShowSavedEntryWhatsApp(false);
+              setSavedEntry(null);
+              onClose();
+            }}
+            onSaved={onSaved}
+          />
+        )}
+      </Modal>
+    );
+  }
+
   const bannerClasses =
     entryType === "MILAY"
       ? "bg-success text-white"
@@ -426,6 +508,9 @@ export default function CustomerTransactionModal({
             </Button>
             <Button variant="ghost" size="sm" icon="file-text" className="flex-1" onClick={() => setShowExportSummary(true)}>
               Export
+            </Button>
+            <Button variant="ghost" size="sm" icon="edit" className="flex-1" onClick={() => setShowEditCustomer(true)}>
+              Edit
             </Button>
           </div>
 
@@ -714,6 +799,18 @@ export default function CustomerTransactionModal({
           transactions={history}
           onClose={() => setShowExportSummary(false)}
           onSaved={onSaved}
+        />
+      )}
+
+      {showEditCustomer && (
+        <AddCustomerModal
+          userId={customer.user_id}
+          customer={customer}
+          onClose={() => setShowEditCustomer(false)}
+          onAdded={() => {
+            setShowEditCustomer(false);
+            onSaved();
+          }}
         />
       )}
     </Modal>

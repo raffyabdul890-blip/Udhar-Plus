@@ -58,6 +58,11 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // sw.js must never be auth-gated: a redirected response (e.g. to /login
+    // for a logged-out visitor) is a hard registration failure per the
+    // Service Worker spec ("script resource is behind a redirect"), not just
+    // a wrong page — it would silently break offline support for anyone who
+    // isn't currently signed in.
+    "/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

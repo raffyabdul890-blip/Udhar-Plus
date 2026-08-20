@@ -7,7 +7,7 @@ import SegmentedControl from "@/components/ui/SegmentedControl";
 import Button from "@/components/ui/Button";
 import { useToast } from "@/components/ui/ToastProvider";
 import { recordCustomerTransaction } from "@/lib/db/ledger";
-import { addCustomer, type LocalCustomer } from "@/lib/db/offlineStorage";
+import { addCustomer, updateCustomer, type LocalCustomer } from "@/lib/db/offlineStorage";
 import { fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/utils/datetime";
 
 const contactsPickerAvailable =
@@ -18,18 +18,22 @@ type OpeningBalanceDirection = "owes" | "owed";
 
 export default function AddCustomerModal({
   userId,
+  customer,
   onClose,
   onAdded,
 }: {
   userId: string;
+  /** Present only when editing an existing customer — swaps this into a name/phone/note editor and skips the add-only opening-balance and post-save shortcut screens. */
+  customer?: LocalCustomer;
   onClose: () => void;
-  /** Fires once the customer (and any opening balance) is saved — the caller decides the next screen. */
+  /** Fires once the customer (and any opening balance) is saved — the caller decides the next screen. In edit mode, fires immediately with action "done". */
   onAdded: (customer: LocalCustomer, action: PostAddAction) => void;
 }) {
+  const isEditing = Boolean(customer);
   const showToast = useToast();
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [description, setDescription] = useState("");
+  const [name, setName] = useState(customer?.name ?? "");
+  const [phone, setPhone] = useState(customer?.phone ?? "");
+  const [description, setDescription] = useState(customer?.description ?? "");
   const [openingDirection, setOpeningDirection] = useState<OpeningBalanceDirection>("owes");
   const [openingAmount, setOpeningAmount] = useState("");
   const [saving, setSaving] = useState(false);
@@ -57,7 +61,21 @@ export default function AddCustomerModal({
     }
 
     setSaving(true);
-    const customer = await addCustomer({
+
+    if (isEditing && customer) {
+      const changes = {
+        name: name.trim(),
+        phone: phone.trim() || undefined,
+        description: description.trim() || undefined,
+      };
+      await updateCustomer(customer.id, changes);
+      setSaving(false);
+      showToast("Customer updated");
+      onAdded({ ...customer, ...changes }, "done");
+      return;
+    }
+
+    const newCustomer = await addCustomer({
       user_id: userId,
       name: name.trim(),
       phone: phone.trim() || undefined,
@@ -77,15 +95,15 @@ export default function AddCustomerModal({
       // form, even though it happened first. created_at (full ms precision)
       // still tie-breaks same-minute entries correctly via compareTransactionDates.
       const openingBalanceDate = fromDatetimeLocalValue(toDatetimeLocalValue(new Date()));
-      await recordCustomerTransaction(customer, type, amount, openingBalanceDate, {
+      await recordCustomerTransaction(newCustomer, type, amount, openingBalanceDate, {
         note: "Opening balance",
       });
-      customer.current_balance = type === "OUT" ? amount : -amount;
+      newCustomer.current_balance = type === "OUT" ? amount : -amount;
     }
 
     setSaving(false);
     showToast("Customer added");
-    setSavedCustomer(customer);
+    setSavedCustomer(newCustomer);
   }
 
   if (savedCustomer) {
@@ -132,17 +150,18 @@ export default function AddCustomerModal({
   }
 
   return (
-    <Modal title="Add Customer" onClose={onClose}>
+    <Modal title={isEditing ? "Edit Customer" : "Add Customer"} onClose={onClose}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {contactsPickerAvailable ? (
-          <Button variant="secondary" icon="contact" onClick={handlePickContact}>
-            Choose from Contacts
-          </Button>
-        ) : (
-          <p className="text-senior-xs text-ink-secondary">
-            Contact picker isn&rsquo;t supported on this device. Enter the number manually.
-          </p>
-        )}
+        {!isEditing &&
+          (contactsPickerAvailable ? (
+            <Button variant="secondary" icon="contact" onClick={handlePickContact}>
+              Choose from Contacts
+            </Button>
+          ) : (
+            <p className="text-senior-xs text-ink-secondary">
+              Contact picker isn&rsquo;t supported on this device. Enter the number manually.
+            </p>
+          ))}
 
         <TextField
           id="customer-name"
@@ -169,26 +188,30 @@ export default function AddCustomerModal({
           placeholder="e.g. Regular customer, shop on Main Road"
         />
 
-        <SegmentedControl
-          label="Opening balance (optional)"
-          value={openingDirection}
-          onChange={setOpeningDirection}
-          options={[
-            { value: "owes", label: "Customer owes me" },
-            { value: "owed", label: "I owe customer" },
-          ]}
-        />
-        <TextField
-          id="customer-opening-balance"
-          label="Opening balance amount"
-          type="number"
-          inputMode="decimal"
-          min="0"
-          step="0.01"
-          value={openingAmount}
-          onChange={(e) => setOpeningAmount(e.target.value)}
-          placeholder="0"
-        />
+        {!isEditing && (
+          <>
+            <SegmentedControl
+              label="Opening balance (optional)"
+              value={openingDirection}
+              onChange={setOpeningDirection}
+              options={[
+                { value: "owes", label: "Customer owes me" },
+                { value: "owed", label: "I owe customer" },
+              ]}
+            />
+            <TextField
+              id="customer-opening-balance"
+              label="Opening balance amount"
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="0.01"
+              value={openingAmount}
+              onChange={(e) => setOpeningAmount(e.target.value)}
+              placeholder="0"
+            />
+          </>
+        )}
 
         {error && (
           <p role="alert" className="rounded-xl border border-danger/30 bg-danger-light px-4 py-3 text-senior-sm font-medium text-danger-dark">
@@ -197,7 +220,7 @@ export default function AddCustomerModal({
         )}
 
         <Button type="submit" loading={saving} fullWidth>
-          Save Customer
+          {isEditing ? "Save Changes" : "Save Customer"}
         </Button>
       </form>
     </Modal>

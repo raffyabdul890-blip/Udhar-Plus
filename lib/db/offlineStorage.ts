@@ -221,6 +221,23 @@ class UdharPlusDB extends Dexie {
       cashbookEntries: "id, user_id, entry_date",
       businessSettings: "id, user_id",
     });
+    // Adds a compound date index so the Dashboard's "this month" summary and
+    // recent-activity feed can query a bounded window of transactions
+    // directly via IndexedDB instead of pulling a shop's entire transaction
+    // history into memory just to compute a handful of numbers. (Cashbook
+    // entries stay a full scan — CashbookTab derives "current cash" from a
+    // running sum of ALL entries, since there's no denormalized balance for
+    // cashbook the way LocalCustomer.current_balance exists for customers.)
+    this.version(4).stores({
+      customers: "id, user_id, updated_at",
+      bankAccounts: "id, user_id, updated_at",
+      transactions: "id, user_id, [entity_type+entity_id], [user_id+transaction_date]",
+      pendingDeletes: "id, table, user_id",
+      photos: "id, user_id",
+      items: "id, user_id, updated_at",
+      cashbookEntries: "id, user_id, entry_date",
+      businessSettings: "id, user_id",
+    });
   }
 }
 
@@ -404,6 +421,17 @@ export async function getTransactionsForEntity(
 
 export async function getAllTransactions(userId: string): Promise<LocalTransaction[]> {
   return requireDb().transactions.where("user_id").equals(userId).toArray();
+}
+
+/** Bounded by the `[user_id+transaction_date]` index — for summaries that only need a recent window (e.g. the Dashboard), not `getAllTransactions`' full history. */
+export async function getRecentTransactions(
+  userId: string,
+  sinceIso: string
+): Promise<LocalTransaction[]> {
+  return requireDb()
+    .transactions.where("[user_id+transaction_date]")
+    .between([userId, sinceIso], [userId, Dexie.maxKey])
+    .toArray();
 }
 
 export async function getTransaction(id: string): Promise<LocalTransaction | undefined> {
@@ -604,6 +632,27 @@ export async function getUnsyncedBusinessSettings(
 
 export async function getPendingDeletes(): Promise<PendingDelete[]> {
   return requireDb().pendingDeletes.toArray();
+}
+
+/** Total unsynced writes (any table) plus queued deletes — the "pending changes" count shown in Backup & Sync. */
+export async function getPendingSyncCount(userId: string): Promise<number> {
+  const [customers, bankAccounts, transactions, items, cashbookEntries, deletes] = await Promise.all([
+    getUnsyncedCustomers(userId),
+    getUnsyncedBankAccounts(userId),
+    getUnsyncedTransactions(userId),
+    getUnsyncedItems(userId),
+    getUnsyncedCashbookEntries(userId),
+    getPendingDeletes(),
+  ]);
+  const pendingDeleteCount = deletes.filter((d) => d.user_id === userId).length;
+  return (
+    customers.length +
+    bankAccounts.length +
+    transactions.length +
+    items.length +
+    cashbookEntries.length +
+    pendingDeleteCount
+  );
 }
 
 export async function clearPendingDelete(id: string): Promise<void> {

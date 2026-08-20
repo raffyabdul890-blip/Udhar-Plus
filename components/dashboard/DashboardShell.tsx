@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import OnboardingModal from "@/components/auth/OnboardingModal";
 import TopNavbar from "@/components/dashboard/TopNavbar";
+import OfflineBanner from "@/components/dashboard/OfflineBanner";
 import BottomNav, { NAV_ITEMS, type BottomTabId } from "@/components/dashboard/BottomNav";
 import DesktopSidebar from "@/components/dashboard/DesktopSidebar";
 import DashboardHome from "@/components/dashboard/DashboardHome";
@@ -15,7 +16,7 @@ import BankWalletTab from "@/components/bank/BankWalletTab";
 import MoreTab from "@/components/settings/MoreTab";
 import { isOnboardingCompleteLocally } from "@/lib/onboarding";
 
-export type QuickActionId = "give" | "receive" | "expense" | "sale";
+export type QuickActionId = "give" | "receive" | "customer" | "expense" | "sale";
 
 export default function DashboardShell({
   userId,
@@ -43,6 +44,14 @@ export default function DashboardShell({
     }
   }, [onboardingCompleted, userId]);
 
+  useEffect(() => {
+    // Tab content swaps in place rather than navigating, so the browser keeps
+    // whatever scroll position the previous tab was at — without this, a tab
+    // switched to while scrolled down can render its top content behind the
+    // sticky header instead of opening at the top like a fresh screen would.
+    window.scrollTo(0, 0);
+  }, [activeTab]);
+
   const needsOnboarding = !onboardingCompleted;
   const primaryLabel = shopName ?? fullName ?? "Udhar Plus";
   const sectionTitle = NAV_ITEMS.find((t) => t.id === activeTab)?.label ?? "Udhar Plus";
@@ -62,6 +71,7 @@ export default function DashboardShell({
           style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}
         >
           <TopNavbar primaryLabel={primaryLabel} sectionTitle={sectionTitle} />
+          <OfflineBanner />
         </div>
 
         <div className="flex-1 px-4 pb-[calc(6rem_+_env(safe-area-inset-bottom))] lg:pb-8">
@@ -78,7 +88,10 @@ export default function DashboardShell({
               userId={userId}
               shopLabel={primaryLabel}
               pendingAction={
-                pendingAction === "give" || pendingAction === "receive" || pendingAction === "sale"
+                pendingAction === "give" ||
+                pendingAction === "receive" ||
+                pendingAction === "customer" ||
+                pendingAction === "sale"
                   ? pendingAction
                   : null
               }

@@ -180,11 +180,15 @@ export default function CashbookTab({
               <Amount value={openingBalance} className="text-senior-lg font-bold text-ink" />
             </div>
             <div className="rounded-xl border border-border bg-surface p-3">
-              <p className="text-senior-xs text-ink-secondary">Today&rsquo;s Cash In</p>
+              <p className="text-senior-xs text-ink-secondary">
+                Cash In{datePreset === "today" ? " Today" : ""}
+              </p>
               <Amount value={cashInTotal} prefix="+" className="text-senior-lg font-bold text-success-dark" />
             </div>
             <div className="rounded-xl border border-border bg-surface p-3">
-              <p className="text-senior-xs text-ink-secondary">Today&rsquo;s Cash Out</p>
+              <p className="text-senior-xs text-ink-secondary">
+                Cash Out{datePreset === "today" ? " Today" : ""}
+              </p>
               <Amount value={cashOutTotal} prefix="-" className="text-senior-lg font-bold text-danger" />
             </div>
             <div className="rounded-xl border border-border bg-surface p-3">

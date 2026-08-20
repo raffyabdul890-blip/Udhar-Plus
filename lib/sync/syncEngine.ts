@@ -18,6 +18,7 @@ import {
   hydrateBusinessSettings,
   type LocalEntityTable,
 } from "@/lib/db/offlineStorage";
+import { markSyncedNow } from "@/lib/sync/syncStatus";
 
 const TABLE_TO_SUPABASE: Record<LocalEntityTable, string> = {
   customers: "customers",
@@ -164,6 +165,8 @@ export async function syncPendingRecords(userId: string): Promise<void> {
       });
       if (!error) await markBusinessSettingsSynced(userId);
     }
+
+    markSyncedNow(userId);
   } finally {
     syncInFlight = false;
   }

@@ -7,10 +7,10 @@ import Button from "@/components/ui/Button";
 import QuickActions from "@/components/dashboard/QuickActions";
 import BalanceCardSkeleton from "@/components/skeletons/BalanceCardSkeleton";
 import {
-  getAllTransactions,
   getBankAccounts,
   getCashbookEntries,
   getCustomers,
+  getRecentTransactions,
   type CashbookEntry,
   type LocalBankAccount,
   type LocalCustomer,
@@ -47,7 +47,7 @@ export default function DashboardHome({
 }: {
   userId: string;
   shopLabel: string;
-  onQuickAction: (id: "give" | "receive" | "expense" | "sale") => void;
+  onQuickAction: (id: "give" | "receive" | "customer" | "expense" | "sale") => void;
   onNavigateToTab: (tab: BottomTabId) => void;
 }) {
   const [customers, setCustomers] = useState<LocalCustomer[]>([]);
@@ -57,10 +57,21 @@ export default function DashboardHome({
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
+    // Transactions are bounded to a rolling 60-day window — always a superset
+    // of the current calendar month (at most 31 days) with room to spare for
+    // "Recent Activity" to find its most-recent rows — instead of pulling a
+    // shop's entire multi-year Khata history into memory just for this small
+    // summary. Cashbook entries stay a full fetch: "Cash Available" is a
+    // running sum of every entry ever recorded (see getCashbookEntries), so
+    // bounding it would silently understate the real balance.
+    const sixtyDaysAgo = new Date();
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+    const sinceIso = sixtyDaysAgo.toISOString();
+
     const [customerRows, bankRows, transactionRows, cashbookRows] = await Promise.all([
       getCustomers(userId),
       getBankAccounts(userId),
-      getAllTransactions(userId),
+      getRecentTransactions(userId, sinceIso),
       getCashbookEntries(userId),
     ]);
     setCustomers(customerRows);

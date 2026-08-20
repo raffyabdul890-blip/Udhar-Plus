@@ -28,8 +28,8 @@ export default function KhataTab({
 }: {
   userId: string;
   shopLabel: string;
-  /** Set by a Dashboard quick action that needs a customer picker before it can proceed. */
-  pendingAction?: "give" | "receive" | "sale" | null;
+  /** Set by a Dashboard quick action that needs a customer picker (or the add-customer form) before it can proceed. */
+  pendingAction?: "give" | "receive" | "sale" | "customer" | null;
   onPendingActionHandled?: () => void;
 }) {
   const [search, setSearch] = useState("");
@@ -57,7 +57,7 @@ export default function KhataTab({
   useEffect(() => {
     if (pendingAction && modal.kind === "none") {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setModal({ kind: "pick-customer", purpose: pendingAction });
+      setModal(pendingAction === "customer" ? { kind: "add-customer" } : { kind: "pick-customer", purpose: pendingAction });
     }
   }, [pendingAction, modal.kind]);
 

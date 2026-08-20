@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import EmptyState from "@/components/ui/EmptyState";
+import SearchBar from "@/components/dashboard/SearchBar";
 import { CustomerCardSkeletonList } from "@/components/skeletons/CustomerCardSkeleton";
 import AddItemModal from "@/components/items/AddItemModal";
 import { deleteItem, getItems, type LocalItem } from "@/lib/db/offlineStorage";
@@ -16,8 +17,15 @@ const DEFAULT_LOW_STOCK_THRESHOLD = 5;
 export default function ItemsTab({ userId }: { userId: string }) {
   const [items, setItems] = useState<LocalItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
   const [modal, setModal] = useState<ModalState>({ kind: "none" });
   const [pendingDelete, setPendingDelete] = useState<LocalItem | null>(null);
+
+  const query = search.trim().toLowerCase();
+  const matchedItems = useMemo(
+    () => (query ? items.filter((item) => item.name.toLowerCase().includes(query)) : items),
+    [items, query]
+  );
 
   const reload = useCallback(async () => {
     setItems(await getItems(userId));
@@ -45,32 +53,39 @@ export default function ItemsTab({ userId }: { userId: string }) {
       ) : items.length === 0 ? (
         <EmptyState icon="items" title="No items yet" description="Add your first product to start tracking stock." />
       ) : (
-        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((item) => {
-            const threshold = item.low_stock_threshold ?? DEFAULT_LOW_STOCK_THRESHOLD;
-            const lowStock = item.stock_quantity <= threshold;
-            return (
-              <li key={item.id}>
-                <button
-                  type="button"
-                  onClick={() => setModal({ kind: "edit", item })}
-                  className="flex min-h-tap w-full flex-col gap-2 rounded-xl border border-border bg-surface p-4 text-left shadow-card transition active:scale-[0.99] active:bg-surface-alt"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="truncate text-senior-base font-bold text-ink">{item.name}</span>
-                    {lowStock && <Badge variant="warning">Low stock</Badge>}
-                  </div>
-                  <span className="text-senior-sm text-ink-secondary">Stock: {item.stock_quantity}</span>
-                  {item.selling_price != null && (
-                    <span className="text-senior-xs text-ink-tertiary">
-                      Sells at {item.selling_price.toLocaleString("en-PK")}
-                    </span>
-                  )}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+        <>
+          <SearchBar value={search} onChange={setSearch} placeholder="Search items…" />
+          {matchedItems.length === 0 ? (
+            <EmptyState icon="items" title="No items found" description="Try a different search." />
+          ) : (
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {matchedItems.map((item) => {
+                const threshold = item.low_stock_threshold ?? DEFAULT_LOW_STOCK_THRESHOLD;
+                const lowStock = item.stock_quantity <= threshold;
+                return (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      onClick={() => setModal({ kind: "edit", item })}
+                      className="flex min-h-tap w-full flex-col gap-2 rounded-xl border border-border bg-surface p-4 text-left shadow-card transition active:scale-[0.99] active:bg-surface-alt"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="truncate text-senior-base font-bold text-ink">{item.name}</span>
+                        {lowStock && <Badge variant="warning">Low stock</Badge>}
+                      </div>
+                      <span className="text-senior-sm text-ink-secondary">Stock: {item.stock_quantity}</span>
+                      {item.selling_price != null && (
+                        <span className="text-senior-xs text-ink-tertiary">
+                          Sells at {item.selling_price.toLocaleString("en-PK")}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </>
       )}
 
       <Button icon="plus" fullWidth onClick={() => setModal({ kind: "add" })}>

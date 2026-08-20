@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import SyncManagerMount from "@/components/sync/SyncManagerMount";
+import ServiceWorkerMount from "@/components/sync/ServiceWorkerMount";
 import ToastProvider from "@/components/ui/ToastProvider";
 import "./globals.css";
 
@@ -50,6 +51,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <body className="min-h-screen bg-canvas font-sans text-ink">
+        <ServiceWorkerMount />
         <SyncManagerMount />
         <ToastProvider>{children}</ToastProvider>
       </body>

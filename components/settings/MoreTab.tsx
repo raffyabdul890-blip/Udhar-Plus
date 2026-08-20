@@ -8,8 +8,15 @@ import { useToast } from "@/components/ui/ToastProvider";
 import { CustomerCardSkeletonList } from "@/components/skeletons/CustomerCardSkeleton";
 import BusinessProfileModal from "@/components/settings/BusinessProfileModal";
 import LegalModal from "@/components/settings/LegalModal";
-import { getBusinessSettings, saveBusinessSettings, type LocalBusinessSettings } from "@/lib/db/offlineStorage";
+import {
+  getBusinessSettings,
+  getPendingSyncCount,
+  saveBusinessSettings,
+  type LocalBusinessSettings,
+} from "@/lib/db/offlineStorage";
 import { syncPendingRecords } from "@/lib/sync/syncEngine";
+import { getLastSyncedAt } from "@/lib/sync/syncStatus";
+import { useOnlineStatus } from "@/lib/hooks/useOnlineStatus";
 import { TERMS_PARAGRAPHS, PRIVACY_PARAGRAPHS } from "@/lib/legalContent";
 
 function Row({
@@ -45,6 +52,19 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
   return <h2 className="px-1 text-senior-xs font-bold uppercase tracking-wide text-ink-tertiary">{children}</h2>;
 }
 
+/** Called from event handlers only (never during render) — Date.now() there is fine, just not in the render path. */
+function formatLastSynced(iso: string | null): string {
+  if (!iso) return "Not synced yet";
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const minutes = Math.round(diffMs / 60_000);
+  if (minutes < 1) return "Synced just now";
+  if (minutes < 60) return `Synced ${minutes} min${minutes === 1 ? "" : "s"} ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `Synced ${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.round(hours / 24);
+  return `Synced ${days} day${days === 1 ? "" : "s"} ago`;
+}
+
 export default function MoreTab({
   userId,
   onNavigateToTab,
@@ -59,11 +79,15 @@ export default function MoreTab({
   const [showProfile, setShowProfile] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
-  const [online, setOnline] = useState(true);
+  const online = useOnlineStatus();
   const [syncing, setSyncing] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [lastSyncedLabel, setLastSyncedLabel] = useState("Not synced yet");
 
   const reload = useCallback(async () => {
     setSettings((await getBusinessSettings(userId)) ?? null);
+    setPendingCount(await getPendingSyncCount(userId));
+    setLastSyncedLabel(formatLastSynced(getLastSyncedAt(userId)));
     setLoading(false);
   }, [userId]);
 
@@ -74,21 +98,6 @@ export default function MoreTab({
     reload();
   }, [reload]);
 
-  useEffect(() => {
-    // Read post-mount (not in a lazy useState initializer) to avoid a hydration
-    // mismatch — SSR always renders "online", corrected here on the client.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setOnline(navigator.onLine);
-    const goOnline = () => setOnline(true);
-    const goOffline = () => setOnline(false);
-    window.addEventListener("online", goOnline);
-    window.addEventListener("offline", goOffline);
-    return () => {
-      window.removeEventListener("online", goOnline);
-      window.removeEventListener("offline", goOffline);
-    };
-  }, []);
-
   async function handleLanguageChange(language: "en" | "ur") {
     const updated = await saveBusinessSettings(userId, { language });
     setSettings(updated);
@@ -98,6 +107,8 @@ export default function MoreTab({
     setSyncing(true);
     await syncPendingRecords(userId);
     setSyncing(false);
+    setPendingCount(await getPendingSyncCount(userId));
+    setLastSyncedLabel(formatLastSynced(getLastSyncedAt(userId)));
     showToast("Synced");
   }
 
@@ -142,6 +153,16 @@ export default function MoreTab({
             <Button variant="secondary" size="sm" onClick={handleSyncNow} disabled={syncing || !online}>
               {syncing ? "Syncing…" : "Sync now"}
             </Button>
+          </div>
+          <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
+            <p className="text-senior-xs text-ink-secondary">
+              {syncing ? "Syncing…" : lastSyncedLabel}
+            </p>
+            {pendingCount > 0 && (
+              <Badge variant="warning">
+                {pendingCount} change{pendingCount === 1 ? "" : "s"} pending
+              </Badge>
+            )}
           </div>
         </div>
       </div>

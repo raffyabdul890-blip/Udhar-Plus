@@ -8,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
       "Track customer credit (udhar) and payments — senior-friendly and works offline.",
     start_url: "/",
     display: "standalone",
-    background_color: "#000000",
-    theme_color: "#000000",
+    background_color: "#F7F7F8",
+    theme_color: "#F7F7F8",
     orientation: "portrait",
     icons: [
       {
