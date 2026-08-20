@@ -21,6 +21,7 @@ import {
   type LocalTransaction,
 } from "@/lib/db/offlineStorage";
 import { isWithinRange, resolveDateRange, type DateRangePreset } from "@/lib/utils/dateRange";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 // Entries with these notes aren't real sales — an opening balance is a
 // starting position, and "Hisaab Baraber" is a balance-clearing adjustment,
@@ -62,6 +63,7 @@ function StatCard({
 }
 
 export default function ReportsTab({ userId, shopLabel }: { userId: string; shopLabel: string }) {
+  const { t } = usePreferences();
   const [customers, setCustomers] = useState<LocalCustomer[]>([]);
   const [transactions, setTransactions] = useState<LocalTransaction[]>([]);
   const [cashbookEntries, setCashbookEntries] = useState<CashbookEntry[]>([]);
@@ -122,17 +124,17 @@ export default function ReportsTab({ userId, shopLabel }: { userId: string; shop
 
   const topItems = useMemo(() => {
     const byItem = new Map<string, { name: string; quantity: number; total: number }>();
-    for (const t of salesInRange) {
-      for (const item of t.items ?? []) {
+    for (const txn of salesInRange) {
+      for (const item of txn.items ?? []) {
         const key = item.itemId ?? item.name;
-        const existing = byItem.get(key) ?? { name: item.name || "Item", quantity: 0, total: 0 };
+        const existing = byItem.get(key) ?? { name: item.name || t("transaction.item"), quantity: 0, total: 0 };
         existing.quantity += item.quantity;
         existing.total += item.quantity * item.pricePerUnit;
         byItem.set(key, existing);
       }
     }
     return [...byItem.values()].sort((a, b) => b.total - a.total).slice(0, 5);
-  }, [salesInRange]);
+  }, [salesInRange, t]);
 
   // ---- Expenses (selected range) ----
   const expensesInRange = useMemo(
@@ -167,7 +169,7 @@ export default function ReportsTab({ userId, shopLabel }: { userId: string; shop
   const openAccount = openAccountId ? bankAccounts.find((a) => a.id === openAccountId) : undefined;
 
   if (loading) {
-    return <CustomerCardSkeletonList count={3} label="Loading reports" />;
+    return <CustomerCardSkeletonList count={3} label={t("reports.title")} />;
   }
 
   return (
@@ -184,20 +186,20 @@ export default function ReportsTab({ userId, shopLabel }: { userId: string; shop
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <section className="flex flex-col gap-3">
-          <h2 className="text-senior-base font-bold text-ink">Business Overview</h2>
+          <h2 className="text-senior-base font-bold text-ink">{t("reports.businessOverview")}</h2>
           <div className="grid grid-cols-3 gap-2 lg:gap-3">
-            <StatCard label="Receivable" value={totalReceivable} tone="danger" />
-            <StatCard label="Payable" value={totalPayable} tone="success" />
-            <StatCard label="Cash Balance" value={cashBalance} />
+            <StatCard label={t("reports.receivable")} value={totalReceivable} tone="danger" />
+            <StatCard label={t("reports.payable")} value={totalPayable} tone="success" />
+            <StatCard label={t("reports.cashBalance")} value={cashBalance} />
           </div>
         </section>
 
         <section className="flex flex-col gap-3">
-          <h2 className="text-senior-base font-bold text-ink">Bank &amp; Wallet</h2>
+          <h2 className="text-senior-base font-bold text-ink">{t("reports.bankAndWallet")}</h2>
           <div className="grid grid-cols-3 gap-2 lg:gap-3">
-            <StatCard label="Total Bank" value={totalBankBalance} />
-            <StatCard label="Total Wallet" value={totalWalletBalance} />
-            <StatCard label="Liquid Balance" value={liquidBalance} tone="success" hint="Cash + Bank + Wallet" />
+            <StatCard label={t("reports.totalBank")} value={totalBankBalance} />
+            <StatCard label={t("reports.totalWallet")} value={totalWalletBalance} />
+            <StatCard label={t("reports.liquidBalance")} value={liquidBalance} tone="success" hint={t("reports.liquidBalanceHint")} />
           </div>
           {bankAccounts.length > 0 && (
             <ul className="flex flex-col gap-2">
@@ -206,7 +208,7 @@ export default function ReportsTab({ userId, shopLabel }: { userId: string; shop
                   <button
                     type="button"
                     onClick={() => setOpenAccountId(account.id)}
-                    className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2 text-left transition active:scale-[0.99] active:bg-surface-alt"
+                    className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2 text-start transition active:scale-[0.99] active:bg-surface-alt"
                   >
                     <BankLogoBadge bankCode={account.bank_code} size="sm" />
                     <span className="flex-1 truncate text-senior-sm font-medium text-ink">
@@ -224,27 +226,39 @@ export default function ReportsTab({ userId, shopLabel }: { userId: string; shop
 
         <section className="flex flex-col gap-3">
           <h2 className="text-senior-base font-bold text-ink">
-            Sales &amp; Expenses {datePreset === "custom" ? "— Selected range" : ""}
+            {t("reports.salesAndExpenses")} {datePreset === "custom" ? t("reports.selectedRange") : ""}
           </h2>
           <div className="grid grid-cols-3 gap-2 lg:gap-3">
-            <StatCard label="Sales" value={totalSales} tone="success" hint={`${salesCount} sale${salesCount === 1 ? "" : "s"}`} />
-            <StatCard label="Expenses" value={totalExpenses} tone="danger" hint={`${expensesInRange.length} expense${expensesInRange.length === 1 ? "" : "s"}`} />
-            <StatCard label="Net Cash Flow" value={netCashFlow} tone={netCashFlow >= 0 ? "success" : "danger"} />
+            <StatCard
+              label={t("sales.salesLabel")}
+              value={totalSales}
+              tone="success"
+              hint={t(salesCount === 1 ? "sales.salesCount" : "sales.salesCountPlural", { count: salesCount })}
+            />
+            <StatCard
+              label={t("reports.expenses")}
+              value={totalExpenses}
+              tone="danger"
+              hint={t(expensesInRange.length === 1 ? "cashbook.expensesCount" : "cashbook.expensesCountPlural", {
+                count: expensesInRange.length,
+              })}
+            />
+            <StatCard label={t("reports.netCashFlow")} value={netCashFlow} tone={netCashFlow >= 0 ? "success" : "danger"} />
           </div>
           {salesCount > 0 && (
             <p className="text-senior-xs text-ink-tertiary">
-              Average sale: Rs. {avgSale.toLocaleString("en-PK", { maximumFractionDigits: 0 })}
+              {t("reports.averageSale", { amount: avgSale.toLocaleString("en-PK", { maximumFractionDigits: 0 }) })}
             </p>
           )}
         </section>
 
         <section className="flex flex-col gap-3">
-          <h2 className="text-senior-base font-bold text-ink">Cash Flow</h2>
+          <h2 className="text-senior-base font-bold text-ink">{t("reports.cashFlow")}</h2>
           <div className="rounded-xl border border-border bg-surface p-4">
             <SimpleBarChart
               bars={[
-                { label: "Money In", value: moneyIn, colorClassName: "bg-success" },
-                { label: "Money Out", value: moneyOut, colorClassName: "bg-danger" },
+                { label: t("reports.moneyIn"), value: moneyIn, colorClassName: "bg-success" },
+                { label: t("reports.moneyOut"), value: moneyOut, colorClassName: "bg-danger" },
               ]}
             />
           </div>
@@ -252,7 +266,7 @@ export default function ReportsTab({ userId, shopLabel }: { userId: string; shop
 
         {expensesByCategory.length > 0 && (
           <section className="flex flex-col gap-3">
-            <h2 className="text-senior-base font-bold text-ink">Expenses by Category</h2>
+            <h2 className="text-senior-base font-bold text-ink">{t("reports.expensesByCategory")}</h2>
             <div className="rounded-xl border border-border bg-surface p-4">
               <SimpleBarChart
                 bars={expensesByCategory.map(([category, total]) => ({
@@ -267,7 +281,7 @@ export default function ReportsTab({ userId, shopLabel }: { userId: string; shop
 
         {topItems.length > 0 && (
           <section className="flex flex-col gap-3">
-            <h2 className="text-senior-base font-bold text-ink">Top Selling Items</h2>
+            <h2 className="text-senior-base font-bold text-ink">{t("reports.topSellingItems")}</h2>
             <ul className="flex flex-col gap-2">
               {topItems.map((item) => (
                 <li key={item.name} className="flex items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2">
@@ -281,9 +295,9 @@ export default function ReportsTab({ userId, shopLabel }: { userId: string; shop
         )}
 
         <section className="flex flex-col gap-3">
-          <h2 className="text-senior-base font-bold text-ink">Top Customers</h2>
+          <h2 className="text-senior-base font-bold text-ink">{t("reports.topCustomers")}</h2>
           {topCustomers.length === 0 ? (
-            <p className="text-senior-sm text-ink-secondary">Not enough data yet.</p>
+            <p className="text-senior-sm text-ink-secondary">{t("common.notEnoughData")}</p>
           ) : (
             <ul className="flex flex-col gap-2">
               {topCustomers.map((customer) => (
@@ -291,11 +305,11 @@ export default function ReportsTab({ userId, shopLabel }: { userId: string; shop
                   <button
                     type="button"
                     onClick={() => setOpenCustomerId(customer.id)}
-                    className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2 text-left transition active:scale-[0.99] active:bg-surface-alt"
+                    className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2 text-start transition active:scale-[0.99] active:bg-surface-alt"
                   >
                     <span className="flex-1 truncate text-senior-sm font-medium text-ink">{customer.name}</span>
                     <Badge variant={customer.current_balance > 0 ? "danger" : "success"}>
-                      {customer.current_balance > 0 ? "To Receive" : "To Pay"}
+                      {customer.current_balance > 0 ? t("khata.toReceive") : t("khata.toPay")}
                     </Badge>
                     <span className="shrink-0 text-senior-sm font-bold text-ink">
                       {Math.abs(customer.current_balance).toLocaleString("en-PK")}

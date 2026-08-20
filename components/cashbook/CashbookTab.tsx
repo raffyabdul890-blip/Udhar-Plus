@@ -19,6 +19,7 @@ import {
   resolveDateRange,
   type DateRangePreset,
 } from "@/lib/utils/dateRange";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 type ViewMode = "cashbook" | "expenses";
 type ModalState =
@@ -54,6 +55,7 @@ export default function CashbookTab({
   pendingExpense?: boolean;
   onPendingActionHandled?: () => void;
 }) {
+  const { t } = usePreferences();
   const [entries, setEntries] = useState<CashbookEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<ViewMode>("cashbook");
@@ -145,18 +147,18 @@ export default function CashbookTab({
   }, [expensesInRange]);
 
   if (loading) {
-    return <CustomerCardSkeletonList count={3} label="Loading cashbook" />;
+    return <CustomerCardSkeletonList count={3} label={t("cashbook.title")} />;
   }
 
   return (
     <div className="flex flex-col gap-4">
       <SegmentedControl
-        label="View"
+        label={t("cashbook.view")}
         value={view}
         onChange={setView}
         options={[
-          { value: "cashbook", label: "Cashbook" },
-          { value: "expenses", label: "Expenses" },
+          { value: "cashbook", label: t("cashbook.cashbookTab") },
+          { value: "expenses", label: t("cashbook.expensesTab") },
         ]}
       />
 
@@ -170,29 +172,29 @@ export default function CashbookTab({
       {view === "cashbook" ? (
         <>
           <div className="rounded-2xl border border-border bg-surface p-6 text-center shadow-card">
-            <p className="text-senior-sm font-medium text-ink-secondary">Current Cash</p>
+            <p className="text-senior-sm font-medium text-ink-secondary">{t("cashbook.currentCash")}</p>
             <Amount value={currentBalance} className="text-senior-3xl font-bold text-ink" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl border border-border bg-surface p-3">
-              <p className="text-senior-xs text-ink-secondary">Opening Balance</p>
+              <p className="text-senior-xs text-ink-secondary">{t("cashbook.openingBalance")}</p>
               <Amount value={openingBalance} className="text-senior-lg font-bold text-ink" />
             </div>
             <div className="rounded-xl border border-border bg-surface p-3">
               <p className="text-senior-xs text-ink-secondary">
-                Cash In{datePreset === "today" ? " Today" : ""}
+                {datePreset === "today" ? t("cashbook.cashInToday") : t("cashbook.cashIn")}
               </p>
               <Amount value={cashInTotal} prefix="+" className="text-senior-lg font-bold text-success-dark" />
             </div>
             <div className="rounded-xl border border-border bg-surface p-3">
               <p className="text-senior-xs text-ink-secondary">
-                Cash Out{datePreset === "today" ? " Today" : ""}
+                {datePreset === "today" ? t("cashbook.cashOutToday") : t("cashbook.cashOut")}
               </p>
               <Amount value={cashOutTotal} prefix="-" className="text-senior-lg font-bold text-danger" />
             </div>
             <div className="rounded-xl border border-border bg-surface p-3">
-              <p className="text-senior-xs text-ink-secondary">Entries</p>
+              <p className="text-senior-xs text-ink-secondary">{t("cashbook.entries")}</p>
               <p className="text-senior-lg font-bold text-ink">{cashInRange.length}</p>
             </div>
           </div>
@@ -204,7 +206,7 @@ export default function CashbookTab({
               fullWidth
               onClick={() => setModal({ kind: "add", expenseMode: false, initialType: "IN" })}
             >
-              Cash In
+              {t("cashbook.cashIn")}
             </Button>
             <Button
               variant="warning"
@@ -212,15 +214,15 @@ export default function CashbookTab({
               fullWidth
               onClick={() => setModal({ kind: "add", expenseMode: false, initialType: "OUT" })}
             >
-              Cash Out
+              {t("cashbook.cashOut")}
             </Button>
           </div>
 
           {cashHistory.length === 0 ? (
             <EmptyState
               icon="cashbook"
-              title="No cash entries"
-              description={`No entries ${datePreset === "today" ? "today" : "in this range"} yet.`}
+              title={t("cashbook.noCashEntries")}
+              description={datePreset === "today" ? t("cashbook.noCashEntriesToday") : t("cashbook.noCashEntriesRange")}
             />
           ) : (
             <ul className="flex flex-col gap-2">
@@ -229,7 +231,7 @@ export default function CashbookTab({
                   <button
                     type="button"
                     onClick={() => setModal({ kind: "edit", entry })}
-                    className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2.5 text-left transition active:scale-[0.99] active:bg-surface-alt"
+                    className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2.5 text-start transition active:scale-[0.99] active:bg-surface-alt"
                   >
                     <span
                       className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
@@ -241,7 +243,7 @@ export default function CashbookTab({
                     <div className="flex flex-1 flex-col overflow-hidden">
                       <span className="truncate text-senior-sm font-bold text-ink">
                         {entry.category}
-                        {entry.is_expense ? " (Expense)" : ""}
+                        {entry.is_expense ? t("cashbook.expenseLabel") : ""}
                       </span>
                       <span className="truncate text-senior-xs text-ink-secondary">
                         {formatDateTime(entry.entry_date)}
@@ -258,7 +260,7 @@ export default function CashbookTab({
                         {entry.amount.toLocaleString("en-PK")}
                       </span>
                       <span className="text-senior-xs text-ink-tertiary">
-                        Bal. {balance.toLocaleString("en-PK")}
+                        {t("cashbook.balanceLabel", { amount: balance.toLocaleString("en-PK") })}
                       </span>
                     </div>
                   </button>
@@ -271,11 +273,13 @@ export default function CashbookTab({
         <>
           <div className="rounded-2xl border border-border bg-surface p-6 text-center shadow-card">
             <p className="text-senior-sm font-medium text-ink-secondary">
-              Total Expenses {datePreset === "today" ? "Today" : ""}
+              {datePreset === "today" ? t("cashbook.totalExpensesToday") : t("cashbook.totalExpenses")}
             </p>
             <Amount value={expensesTotal} className="text-senior-3xl font-bold text-danger" />
             <p className="text-senior-xs text-ink-tertiary">
-              {expensesInRange.length} expense{expensesInRange.length === 1 ? "" : "s"}
+              {t(expensesInRange.length === 1 ? "cashbook.expensesCount" : "cashbook.expensesCountPlural", {
+                count: expensesInRange.length,
+              })}
             </p>
           </div>
 
@@ -304,11 +308,11 @@ export default function CashbookTab({
             fullWidth
             onClick={() => setModal({ kind: "add", expenseMode: true, initialType: "OUT" })}
           >
-            Add Expense
+            {t("cashbook.addExpense")}
           </Button>
 
           {expensesInRange.length === 0 ? (
-            <EmptyState icon="cash-out" title="No expenses yet" description="Add an expense to start tracking your spending." />
+            <EmptyState icon="cash-out" title={t("cashbook.noExpensesYet")} description={t("cashbook.noExpensesDescription")} />
           ) : (
             <ul className="flex flex-col gap-2">
               {expensesInRange.map((entry) => (
@@ -316,7 +320,7 @@ export default function CashbookTab({
                   <button
                     type="button"
                     onClick={() => setModal({ kind: "edit", entry })}
-                    className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2.5 text-left transition active:scale-[0.99] active:bg-surface-alt"
+                    className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2.5 text-start transition active:scale-[0.99] active:bg-surface-alt"
                   >
                     {entry.photo_id ? (
                       <EntryPhotoThumbnail photoId={entry.photo_id} />
@@ -368,8 +372,8 @@ export default function CashbookTab({
 
       {pendingDelete && (
         <ConfirmDialog
-          title="Delete entry?"
-          message="This removes the entry and adjusts your totals. This can't be undone."
+          title={t("cashbook.deleteEntryTitle")}
+          message={t("cashbook.deleteEntryMessage")}
           onConfirm={handleConfirmDelete}
           onCancel={() => setPendingDelete(null)}
         />

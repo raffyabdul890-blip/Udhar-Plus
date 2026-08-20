@@ -160,6 +160,7 @@ export async function syncPendingRecords(userId: string): Promise<void> {
         address: businessSettings.address ?? null,
         category: businessSettings.category ?? null,
         language: businessSettings.language,
+        theme: businessSettings.theme,
         created_at: businessSettings.created_at,
         updated_at: businessSettings.updated_at,
       });

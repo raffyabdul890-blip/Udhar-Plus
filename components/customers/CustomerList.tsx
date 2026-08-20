@@ -5,6 +5,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import AvatarInitial from "@/components/ui/AvatarInitial";
 import Badge from "@/components/ui/Badge";
 import type { LocalCustomer } from "@/lib/db/offlineStorage";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-PK", {
@@ -23,6 +24,8 @@ export default function CustomerList({
   loading: boolean;
   onSelectCustomer: (customer: LocalCustomer) => void;
 }) {
+  const { t } = usePreferences();
+
   if (loading) {
     return <CustomerCardSkeletonList count={4} />;
   }
@@ -31,8 +34,8 @@ export default function CustomerList({
     return (
       <EmptyState
         icon="users"
-        title="No customers yet"
-        description="Add your first customer to start tracking udhar."
+        title={t("khata.noCustomers")}
+        description={t("khata.noCustomersDescription")}
       />
     );
   }
@@ -46,14 +49,15 @@ export default function CustomerList({
             <button
               type="button"
               onClick={() => onSelectCustomer(customer)}
-              className="flex min-h-tap w-full items-center gap-3 rounded-xl border border-border bg-surface p-4 text-left shadow-card transition active:scale-[0.99] active:bg-surface-alt"
+              className="flex min-h-tap w-full items-center gap-3 rounded-xl border border-border bg-surface p-4 text-start shadow-card transition active:scale-[0.99] active:bg-surface-alt"
             >
               <AvatarInitial name={customer.name} />
 
               <div className="flex flex-1 flex-col gap-0.5 overflow-hidden">
                 <span className="truncate text-senior-base font-bold text-ink">{customer.name}</span>
                 <span className="truncate text-senior-xs text-ink-secondary">
-                  {customer.phone ?? (lastEntry ? `Last entry ${formatDate(lastEntry)}` : "No entries yet")}
+                  {customer.phone ??
+                    (lastEntry ? t("khata.lastEntry", { date: formatDate(lastEntry) }) : t("khata.noEntriesYet"))}
                 </span>
               </div>
 
@@ -71,7 +75,7 @@ export default function CustomerList({
                 </span>
                 {customer.current_balance !== 0 && (
                   <Badge variant={customer.current_balance > 0 ? "danger" : "success"}>
-                    {customer.current_balance > 0 ? "To Receive" : "To Pay"}
+                    {customer.current_balance > 0 ? t("khata.toReceive") : t("khata.toPay")}
                   </Badge>
                 )}
               </div>

@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  darkMode: "class",
+  darkMode: ["selector", '[data-theme="dark"]'],
   content: [
     "./app/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
@@ -20,29 +20,31 @@ const config: Config = {
         ],
       },
       colors: {
-        // Light, clean, professional palette — replaces the old dark black/red
-        // brand-* system. Deliberately a different token prefix (no "brand")
-        // so any leftover old dark class is easy to grep for.
-        canvas: "#F7F7F8", // App background
-        surface: "#FFFFFF", // Card / modal background
-        "surface-alt": "#F3F4F6", // Secondary surface, hover/pressed backgrounds
-        "surface-dim": "#EDEDF0", // Skeleton/shimmer base
-        border: "#E5E7EB", // Default hairline border
-        "border-strong": "#D1D5DB",
-        ink: "#171717", // Primary text
-        "ink-secondary": "#6B7280", // Secondary text
-        "ink-tertiary": "#9CA3AF", // Placeholder / disabled text
-        primary: "#6D4AFF", // Brand purple — nav, links, secondary actions
-        "primary-dark": "#5B3AE0", // Pressed state
-        "primary-light": "#F1EEFF", // Soft tinted background (badges, secondary buttons)
-        success: "#16A34A", // Positive financial actions (Cash In, Receive Payment)
-        "success-dark": "#15803D",
-        "success-light": "#DCFCE7",
-        danger: "#DC2626", // Negative financial actions (Give Udhaar, Cash Out) — used carefully
-        "danger-dark": "#B91C1C",
-        "danger-light": "#FEE2E2",
-        warning: "#D97706",
-        "warning-light": "#FEF3C7",
+        // Every value is a CSS custom property (see app/globals.css) so the
+        // whole app re-themes when <html data-theme> flips — no component
+        // needs a dark: variant. Deliberately a different token prefix (no
+        // "brand") so a leftover old class from either retired theme is easy
+        // to grep for.
+        canvas: "var(--color-canvas)", // App background
+        surface: "var(--color-surface)", // Card / modal background
+        "surface-alt": "var(--color-surface-alt)", // Secondary surface, hover/pressed backgrounds
+        "surface-dim": "var(--color-surface-dim)", // Skeleton/shimmer base
+        border: "var(--color-border)", // Default hairline border
+        "border-strong": "var(--color-border-strong)",
+        ink: "var(--color-ink)", // Primary text
+        "ink-secondary": "var(--color-ink-secondary)", // Secondary text
+        "ink-tertiary": "var(--color-ink-tertiary)", // Placeholder / disabled text
+        primary: "var(--color-primary)", // Brand purple — nav, links, secondary actions
+        "primary-dark": "var(--color-primary-dark)", // Pressed state
+        "primary-light": "var(--color-primary-light)", // Soft tinted background (badges, secondary buttons)
+        success: "var(--color-success)", // Positive financial actions (Cash In, Receive Payment)
+        "success-dark": "var(--color-success-dark)",
+        "success-light": "var(--color-success-light)",
+        danger: "var(--color-danger)", // Negative financial actions (Give Udhaar, Cash Out) — used carefully
+        "danger-dark": "var(--color-danger-dark)",
+        "danger-light": "var(--color-danger-light)",
+        warning: "var(--color-warning)",
+        "warning-light": "var(--color-warning-light)",
       },
       spacing: {
         tap: "48px", // Minimum accessible touch target (see FRONTEND_UI.md)
@@ -63,13 +65,13 @@ const config: Config = {
         "senior-3xl": ["3rem", { lineHeight: "1.2" }],
       },
       boxShadow: {
-        card: "0 1px 2px rgba(23,23,23,0.04), 0 1px 3px rgba(23,23,23,0.06)",
-        elevated: "0 8px 24px rgba(23,23,23,0.10), 0 2px 6px rgba(23,23,23,0.06)",
+        card: "0 1px 2px rgba(var(--shadow-color),0.04), 0 1px 3px rgba(var(--shadow-color),0.06)",
+        elevated: "0 8px 24px rgba(var(--shadow-color),0.10), 0 2px 6px rgba(var(--shadow-color),0.06)",
         "focus-ring": "0 0 0 3px rgba(109,74,255,0.35)",
       },
       backgroundImage: {
         "shimmer-gradient":
-          "linear-gradient(90deg, #EDEDF0 0%, #F7F7F8 20%, #EDEDF0 40%, #EDEDF0 100%)",
+          "linear-gradient(90deg, var(--color-surface-dim) 0%, var(--color-canvas) 20%, var(--color-surface-dim) 40%, var(--color-surface-dim) 100%)",
       },
       backgroundSize: {
         shimmer: "1000px 100%",

@@ -1,5 +1,8 @@
+"use client";
+
 import Icon from "@/components/icons/Icon";
 import { NAV_ITEMS, type BottomTabId } from "@/components/dashboard/BottomNav";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 const PRIMARY_ITEMS = NAV_ITEMS.filter((item) => item.id !== "more");
 const MORE_ITEM = NAV_ITEMS.find((item) => item.id === "more")!;
@@ -14,10 +17,12 @@ export default function DesktopSidebar({
   onChange: (tab: BottomTabId) => void;
   primaryLabel: string;
 }) {
+  const { t } = usePreferences();
+
   return (
     <nav
-      aria-label="Main (desktop)"
-      className="hidden w-64 shrink-0 flex-col gap-1 border-r border-border bg-surface px-3 py-6 lg:flex"
+      aria-label={t("nav.mainDesktop")}
+      className="hidden w-64 shrink-0 flex-col gap-1 border-e border-border bg-surface px-3 py-6 lg:flex"
     >
       <div className="flex items-center gap-2 px-3 pb-6">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-white">
@@ -39,7 +44,7 @@ export default function DesktopSidebar({
             }`}
           >
             <Icon name={tab.icon} size={20} />
-            <span>{tab.label}</span>
+            <span>{t(`nav.${tab.id}`)}</span>
           </button>
         );
       })}
@@ -55,7 +60,7 @@ export default function DesktopSidebar({
         }`}
       >
         <Icon name={MORE_ITEM.icon} size={20} />
-        <span>Settings</span>
+        <span>{t("nav.settings")}</span>
       </button>
     </nav>
   );

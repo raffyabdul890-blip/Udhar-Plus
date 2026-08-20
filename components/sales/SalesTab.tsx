@@ -17,6 +17,7 @@ import {
   type LocalTransaction,
 } from "@/lib/db/offlineStorage";
 import { isWithinRange, resolveDateRange, type DateRangePreset } from "@/lib/utils/dateRange";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 type ActiveModal =
   | { kind: "none" }
@@ -34,6 +35,7 @@ function formatDateTime(iso: string) {
 }
 
 export default function SalesTab({ userId, shopLabel }: { userId: string; shopLabel: string }) {
+  const { t } = usePreferences();
   const [customers, setCustomers] = useState<LocalCustomer[]>([]);
   const [transactions, setTransactions] = useState<LocalTransaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,7 +86,7 @@ export default function SalesTab({ userId, shopLabel }: { userId: string; shopLa
   }
 
   if (loading) {
-    return <CustomerCardSkeletonList count={3} label="Loading sales" />;
+    return <CustomerCardSkeletonList count={3} label={t("sales.title")} />;
   }
 
   return (
@@ -100,17 +102,19 @@ export default function SalesTab({ userId, shopLabel }: { userId: string; shopLa
       />
 
       <div className="rounded-2xl border border-border bg-surface p-6 text-center shadow-card">
-        <p className="text-senior-sm font-medium text-ink-secondary">Sales</p>
+        <p className="text-senior-sm font-medium text-ink-secondary">{t("sales.salesLabel")}</p>
         <Amount value={totalSales} className="text-senior-3xl font-bold text-success-dark" />
-        <p className="text-senior-xs text-ink-tertiary">{sales.length} sale{sales.length === 1 ? "" : "s"}</p>
+        <p className="text-senior-xs text-ink-tertiary">
+          {t(sales.length === 1 ? "sales.salesCount" : "sales.salesCountPlural", { count: sales.length })}
+        </p>
       </div>
 
       <Button icon="plus" fullWidth onClick={() => setModal({ kind: "pick-customer" })}>
-        New Sale
+        {t("sales.newSale")}
       </Button>
 
       {sales.length === 0 ? (
-        <EmptyState icon="sales" title="No sales yet" description="Sales are itemized Give Udhaar entries — tap New Sale to bill a customer." />
+        <EmptyState icon="sales" title={t("sales.noSalesYet")} description={t("sales.noSalesDescription")} />
       ) : (
         <ul className="flex flex-col gap-2">
           {sales.map((sale) => {
@@ -120,18 +124,21 @@ export default function SalesTab({ userId, shopLabel }: { userId: string; shopLa
                 <button
                   type="button"
                   onClick={() => setModal({ kind: "customer-txn", customerId: sale.entity_id })}
-                  className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2.5 text-left transition active:scale-[0.99] active:bg-surface-alt"
+                  className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2.5 text-start transition active:scale-[0.99] active:bg-surface-alt"
                 >
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-light text-primary">
                     <Icon name="sales" size={17} />
                   </span>
                   <div className="flex flex-1 flex-col overflow-hidden">
                     <span className="truncate text-senior-sm font-bold text-ink">
-                      {customer?.name ?? "Customer"}
+                      {customer?.name ?? t("dashboard.customerFallback")}
                     </span>
                     <span className="truncate text-senior-xs text-ink-secondary">
-                      {sale.items?.length} item{(sale.items?.length ?? 0) > 1 ? "s" : ""} ·{" "}
-                      {formatDateTime(sale.transaction_date)}
+                      {t(
+                        (sale.items?.length ?? 0) === 1 ? "sales.itemsCount" : "sales.itemsCountPlural",
+                        { count: sale.items?.length ?? 0 }
+                      )}{" "}
+                      · {formatDateTime(sale.transaction_date)}
                     </span>
                   </div>
                   <span className="shrink-0 text-senior-sm font-bold text-ink">
@@ -147,7 +154,7 @@ export default function SalesTab({ userId, shopLabel }: { userId: string; shopLa
       {modal.kind === "pick-customer" && (
         <PickCustomerModal
           customers={customers}
-          title="New Sale — Choose Customer"
+          title={t("sales.chooseCustomer")}
           onClose={closeModal}
           onPick={(customer) => setModal({ kind: "customer-txn", customerId: customer.id, forNewSale: true })}
           onAddNew={() => setModal({ kind: "add-customer" })}

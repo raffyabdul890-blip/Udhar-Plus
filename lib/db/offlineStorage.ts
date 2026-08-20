@@ -164,6 +164,7 @@ export interface LocalBusinessSettings {
   /** References `photos.id`. */
   logo_photo_id?: string;
   language: "en" | "ur";
+  theme: "light" | "dark" | "system";
   created_at: string;
   updated_at: string;
   synced: boolean;
@@ -569,6 +570,7 @@ export async function saveBusinessSettings(
     id: userId,
     user_id: userId,
     language: "en",
+    theme: "light",
     ...existing,
     ...changes,
     created_at: existing?.created_at ?? nowIso(),

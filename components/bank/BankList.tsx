@@ -1,9 +1,12 @@
+"use client";
+
 import { CustomerCardSkeletonList } from "@/components/skeletons/CustomerCardSkeleton";
 import EmptyState from "@/components/ui/EmptyState";
 import Badge from "@/components/ui/Badge";
 import BankLogoBadge from "@/components/bank/BankLogoBadge";
 import { getFinancialInstitution } from "@/lib/constants/banks";
 import type { LocalBankAccount } from "@/lib/db/offlineStorage";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 export default function BankList({
   accounts,
@@ -14,16 +17,18 @@ export default function BankList({
   loading: boolean;
   onSelectAccount: (account: LocalBankAccount) => void;
 }) {
+  const { t } = usePreferences();
+
   if (loading) {
-    return <CustomerCardSkeletonList count={4} label="Loading bank accounts" />;
+    return <CustomerCardSkeletonList count={4} label={t("bank.title")} />;
   }
 
   if (accounts.length === 0) {
     return (
       <EmptyState
         icon="bank"
-        title="No bank or wallet accounts yet"
-        description="Add one to start tracking cash flow."
+        title={t("bank.noAccounts")}
+        description={t("bank.noAccountsDescription")}
       />
     );
   }
@@ -37,7 +42,7 @@ export default function BankList({
             <button
               type="button"
               onClick={() => onSelectAccount(account)}
-              className="flex min-h-tap w-full items-center gap-3 rounded-xl border border-border bg-surface p-4 text-left shadow-card transition active:scale-[0.99] active:bg-surface-alt"
+              className="flex min-h-tap w-full items-center gap-3 rounded-xl border border-border bg-surface p-4 text-start shadow-card transition active:scale-[0.99] active:bg-surface-alt"
             >
               <BankLogoBadge bankCode={account.bank_code} />
 
@@ -46,7 +51,7 @@ export default function BankList({
                   <span className="truncate text-senior-base font-bold text-ink">
                     {account.account_title}
                   </span>
-                  {category && <Badge>{category === "bank" ? "Bank" : "Wallet"}</Badge>}
+                  {category && <Badge>{category === "bank" ? t("bank.typeBank") : t("bank.typeWallet")}</Badge>}
                 </div>
                 <span className="truncate text-senior-sm text-ink-secondary">
                   {account.bank_name} · {account.account_number}

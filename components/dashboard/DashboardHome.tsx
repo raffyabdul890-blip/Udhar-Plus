@@ -18,6 +18,7 @@ import {
 } from "@/lib/db/offlineStorage";
 import { isWithinRange, resolveDateRange } from "@/lib/utils/dateRange";
 import type { BottomTabId } from "@/components/dashboard/BottomNav";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 type ActivityRow = {
   id: string;
@@ -50,6 +51,7 @@ export default function DashboardHome({
   onQuickAction: (id: "give" | "receive" | "customer" | "expense" | "sale") => void;
   onNavigateToTab: (tab: BottomTabId) => void;
 }) {
+  const { t, language } = usePreferences();
   const [customers, setCustomers] = useState<LocalCustomer[]>([]);
   const [bankAccounts, setBankAccounts] = useState<LocalBankAccount[]>([]);
   const [transactions, setTransactions] = useState<LocalTransaction[]>([]);
@@ -115,33 +117,38 @@ export default function DashboardHome({
     const accountById = new Map(bankAccounts.map((a) => [a.id, a]));
     const rows: ActivityRow[] = [];
 
-    for (const t of transactions) {
-      if (t.entity_type === "customer") {
-        const customer = customerById.get(t.entity_id);
+    for (const txn of transactions) {
+      if (txn.entity_type === "customer") {
+        const customer = customerById.get(txn.entity_id);
         rows.push({
-          id: t.id,
-          date: t.transaction_date,
-          icon: t.type === "OUT" ? "khata" : "cash-in",
-          label: t.type === "OUT" ? "Gave Udhaar" : "Received Payment",
-          detail: customer?.name ?? "Customer",
-          amount: t.amount,
-          positive: t.type === "IN",
+          id: txn.id,
+          date: txn.transaction_date,
+          icon: txn.type === "OUT" ? "khata" : "cash-in",
+          label: txn.type === "OUT" ? t("dashboard.gaveUdhaar") : t("dashboard.receivedPayment"),
+          detail: customer?.name ?? t("dashboard.customerFallback"),
+          amount: txn.amount,
+          positive: txn.type === "IN",
           tab: "khata",
         });
-      } else if (t.entity_type === "bank") {
+      } else if (txn.entity_type === "bank") {
         // Skip legs already represented by their owning Khata/Cashbook record, and
         // one side of every transfer pair, so one real-world event = one row.
-        if (t.link_kind === "customer_payment_leg" || t.link_kind === "expense_leg") continue;
-        if (t.link_kind === "transfer_leg" && t.type === "IN") continue;
-        const account = accountById.get(t.entity_id);
+        if (txn.link_kind === "customer_payment_leg" || txn.link_kind === "expense_leg") continue;
+        if (txn.link_kind === "transfer_leg" && txn.type === "IN") continue;
+        const account = accountById.get(txn.entity_id);
         rows.push({
-          id: t.id,
-          date: t.transaction_date,
-          icon: t.link_kind === "transfer_leg" ? "transfer" : t.type === "IN" ? "cash-in" : "cash-out",
-          label: t.link_kind === "transfer_leg" ? "Transfer" : t.type === "IN" ? "Added Money" : "Removed Money",
-          detail: account?.account_title ?? "Account",
-          amount: t.amount,
-          positive: t.type === "IN",
+          id: txn.id,
+          date: txn.transaction_date,
+          icon: txn.link_kind === "transfer_leg" ? "transfer" : txn.type === "IN" ? "cash-in" : "cash-out",
+          label:
+            txn.link_kind === "transfer_leg"
+              ? t("dashboard.transfer")
+              : txn.type === "IN"
+                ? t("dashboard.addedMoney")
+                : t("dashboard.removedMoney"),
+          detail: account?.account_title ?? t("dashboard.accountFallback"),
+          amount: txn.amount,
+          positive: txn.type === "IN",
           tab: "bank",
         });
       }
@@ -152,7 +159,7 @@ export default function DashboardHome({
         id: e.id,
         date: e.entry_date,
         icon: e.is_expense ? "cash-out" : e.type === "IN" ? "cash-in" : "cash-out",
-        label: e.is_expense ? "Expense" : e.type === "IN" ? "Cash In" : "Cash Out",
+        label: e.is_expense ? t("dashboard.expense") : e.type === "IN" ? t("dashboard.cashIn") : t("dashboard.cashOut"),
         detail: e.category,
         amount: e.amount,
         positive: e.type === "IN" && !e.is_expense,
@@ -161,7 +168,7 @@ export default function DashboardHome({
     }
 
     return rows.sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 6);
-  }, [transactions, cashbookEntries, customers, bankAccounts]);
+  }, [transactions, cashbookEntries, customers, bankAccounts, t]);
 
   if (loading) {
     return (
@@ -172,7 +179,7 @@ export default function DashboardHome({
     );
   }
 
-  const today = new Date().toLocaleDateString("en-PK", {
+  const today = new Date().toLocaleDateString(language === "ur" ? "ur-PK-u-nu-latn" : "en-PK", {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -184,35 +191,35 @@ export default function DashboardHome({
 
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-2xl border border-border bg-surface p-4 shadow-card">
-          <p className="text-senior-xs font-medium text-ink-secondary">Total Receivable</p>
+          <p className="text-senior-xs font-medium text-ink-secondary">{t("dashboard.totalReceivable")}</p>
           <Amount value={totalReceivable} className="text-senior-xl font-bold text-danger" />
         </div>
         <div className="rounded-2xl border border-border bg-surface p-4 shadow-card">
-          <p className="text-senior-xs font-medium text-ink-secondary">Total Payable</p>
+          <p className="text-senior-xs font-medium text-ink-secondary">{t("dashboard.totalPayable")}</p>
           <Amount value={totalPayable} className="text-senior-xl font-bold text-success-dark" />
         </div>
         <div className="rounded-2xl border border-border bg-surface p-4 shadow-card">
-          <p className="text-senior-xs font-medium text-ink-secondary">Cash Available</p>
+          <p className="text-senior-xs font-medium text-ink-secondary">{t("dashboard.cashAvailable")}</p>
           <Amount value={cashBalance} className="text-senior-xl font-bold text-ink" />
         </div>
         <div className="rounded-2xl border border-border bg-surface p-4 shadow-card">
-          <p className="text-senior-xs font-medium text-ink-secondary">Bank + Wallet</p>
+          <p className="text-senior-xs font-medium text-ink-secondary">{t("dashboard.bankAndWallet")}</p>
           <Amount value={bankWalletBalance} className="text-senior-xl font-bold text-ink" />
         </div>
       </div>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-senior-base font-bold text-ink">Quick Actions</h2>
+        <h2 className="text-senior-base font-bold text-ink">{t("dashboard.quickActions")}</h2>
         <QuickActions onAction={onQuickAction} />
       </section>
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-senior-base font-bold text-ink">Recent Activity</h2>
+          <h2 className="text-senior-base font-bold text-ink">{t("dashboard.recentActivity")}</h2>
         </div>
         {activity.length === 0 ? (
           <p className="rounded-xl border border-border bg-surface p-6 text-center text-senior-sm text-ink-secondary">
-            No activity yet. Use Quick Actions above to get started.
+            {t("dashboard.noActivity")}
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
@@ -221,7 +228,7 @@ export default function DashboardHome({
                 <button
                   type="button"
                   onClick={() => onNavigateToTab(row.tab)}
-                  className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2.5 text-left transition active:scale-[0.99] active:bg-surface-alt"
+                  className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2.5 text-start transition active:scale-[0.99] active:bg-surface-alt"
                 >
                   <span
                     className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
@@ -250,19 +257,19 @@ export default function DashboardHome({
       </section>
 
       <section className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4 shadow-card">
-        <h2 className="text-senior-base font-bold text-ink">Business Summary — This Month</h2>
+        <h2 className="text-senior-base font-bold text-ink">{t("dashboard.businessSummary")}</h2>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <p className="text-senior-xs text-ink-secondary">Sales</p>
+            <p className="text-senior-xs text-ink-secondary">{t("dashboard.sales")}</p>
             <Amount value={monthSales} className="text-senior-lg font-bold text-success-dark" />
           </div>
           <div>
-            <p className="text-senior-xs text-ink-secondary">Expenses</p>
+            <p className="text-senior-xs text-ink-secondary">{t("dashboard.expenses")}</p>
             <Amount value={monthExpenses} className="text-senior-lg font-bold text-danger" />
           </div>
         </div>
         <Button variant="ghost" size="sm" icon="arrow-right" onClick={() => onNavigateToTab("reports")}>
-          View full report
+          {t("dashboard.viewFullReport")}
         </Button>
       </section>
     </div>

@@ -9,10 +9,12 @@ import Button from "@/components/ui/Button";
 import Amount from "@/components/ui/Amount";
 import { getFinancialInstitution } from "@/lib/constants/banks";
 import { getBankAccounts, type LocalBankAccount } from "@/lib/db/offlineStorage";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 type ActiveModal = { kind: "none" } | { kind: "add-account" } | { kind: "account-txn"; accountId: string };
 
 export default function BankWalletTab({ userId }: { userId: string }) {
+  const { t } = usePreferences();
   const [search, setSearch] = useState("");
   const [accounts, setAccounts] = useState<LocalBankAccount[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,22 +57,22 @@ export default function BankWalletTab({ userId }: { userId: string }) {
       {!query && (
         <>
           <p className="rounded-xl border border-primary/20 bg-primary-light px-4 py-3 text-senior-xs text-primary">
-            My Accounts — a manual ledger. Udhar Plus never connects to real banks or moves real money.
+            {t("bank.disclaimer")}
           </p>
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-2xl border border-border bg-surface p-4 shadow-card">
-              <p className="text-senior-xs font-medium text-ink-secondary">Total Bank</p>
+              <p className="text-senior-xs font-medium text-ink-secondary">{t("bank.totalBank")}</p>
               <Amount value={totalBank} className="text-senior-xl font-bold text-ink" />
             </div>
             <div className="rounded-2xl border border-border bg-surface p-4 shadow-card">
-              <p className="text-senior-xs font-medium text-ink-secondary">Total Wallet</p>
+              <p className="text-senior-xs font-medium text-ink-secondary">{t("bank.totalWallet")}</p>
               <Amount value={totalWallet} className="text-senior-xl font-bold text-ink" />
             </div>
           </div>
         </>
       )}
 
-      <SearchBar value={search} onChange={setSearch} placeholder="Search accounts…" />
+      <SearchBar value={search} onChange={setSearch} placeholder={t("bank.searchPlaceholder")} />
 
       <BankList
         accounts={matchedAccounts}
@@ -80,7 +82,7 @@ export default function BankWalletTab({ userId }: { userId: string }) {
 
       {!query && (
         <Button icon="plus" fullWidth onClick={() => setModal({ kind: "add-account" })}>
-          Add Bank / Wallet Account
+          {t("bank.addAccount")}
         </Button>
       )}
 

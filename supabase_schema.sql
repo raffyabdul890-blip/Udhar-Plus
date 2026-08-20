@@ -292,9 +292,13 @@ create table if not exists public.business_settings (
   address text,
   category text,
   language text not null default 'en' check (language in ('en', 'ur')),
+  theme text not null default 'light' check (theme in ('light', 'dark', 'system')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.business_settings add column if not exists theme text not null default 'light'
+  check (theme in ('light', 'dark', 'system'));
 
 drop trigger if exists business_settings_set_updated_at on public.business_settings;
 create trigger business_settings_set_updated_at

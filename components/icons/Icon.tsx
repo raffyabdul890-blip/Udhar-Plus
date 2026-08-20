@@ -50,7 +50,11 @@ export type IconName =
   | "wallet"
   | "chart-bar"
   | "arrow-right"
-  | "clock";
+  | "clock"
+  | "sun"
+  | "moon"
+  | "monitor"
+  | "translate";
 
 const PATHS: Record<IconName, React.ReactNode> = {
   dashboard: (
@@ -286,7 +290,29 @@ const PATHS: Record<IconName, React.ReactNode> = {
       <path d="M12 7v5.3l3.5 2" />
     </>
   ),
+  sun: (
+    <>
+      <circle cx="12" cy="12" r="4.2" />
+      <path d="M12 2.5v2.4M12 19.1v2.4M4.6 4.6l1.7 1.7M17.7 17.7l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.6 19.4l1.7-1.7M17.7 6.3l1.7-1.7" />
+    </>
+  ),
+  moon: <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5z" />,
+  monitor: (
+    <>
+      <rect x="2.5" y="4.5" width="19" height="13" rx="1.8" />
+      <path d="M8 20.5h8M12 17.5v3" />
+    </>
+  ),
+  translate: (
+    <>
+      <path d="M3.5 5.5h9M8 3.5v2M6 5.5c0 3.5 2.2 6.3 5.5 8M10 5.5c-.7 3.8-3.5 7.3-7.5 9" />
+      <path d="M13.5 20.5 17.5 11l4 9.5M14.7 17.5h5.6" />
+    </>
+  ),
 };
+
+/** Icons whose shape encodes a left/right direction (an arrow, a chevron pointing "back"/"forward") — these need to mirror under RTL so they still point toward the same reading-relative direction. Icons like check/plus/trash aren't directional and must never get this treatment. */
+const DIRECTIONAL_ICONS = new Set<IconName>(["chevron-left", "chevron-right", "arrow-right", "logout", "transfer"]);
 
 export default function Icon({
   name,
@@ -310,7 +336,7 @@ export default function Icon({
       strokeWidth={name === "whatsapp" ? 0 : strokeWidth}
       strokeLinecap="round"
       strokeLinejoin="round"
-      className={className}
+      className={`${DIRECTIONAL_ICONS.has(name) ? "rtl:-scale-x-100" : ""} ${className ?? ""}`}
     >
       {PATHS[name]}
     </svg>

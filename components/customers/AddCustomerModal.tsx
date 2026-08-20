@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/ToastProvider";
 import { recordCustomerTransaction } from "@/lib/db/ledger";
 import { addCustomer, updateCustomer, type LocalCustomer } from "@/lib/db/offlineStorage";
 import { fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/utils/datetime";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 const contactsPickerAvailable =
   typeof navigator !== "undefined" && typeof navigator.contacts?.select === "function";
@@ -29,6 +30,7 @@ export default function AddCustomerModal({
   /** Fires once the customer (and any opening balance) is saved — the caller decides the next screen. In edit mode, fires immediately with action "done". */
   onAdded: (customer: LocalCustomer, action: PostAddAction) => void;
 }) {
+  const { t } = usePreferences();
   const isEditing = Boolean(customer);
   const showToast = useToast();
   const [name, setName] = useState(customer?.name ?? "");
@@ -56,7 +58,7 @@ export default function AddCustomerModal({
     setError(null);
 
     if (!name.trim()) {
-      setError("Enter the customer's name.");
+      setError(t("customer.errorEnterName"));
       return;
     }
 
@@ -70,7 +72,7 @@ export default function AddCustomerModal({
       };
       await updateCustomer(customer.id, changes);
       setSaving(false);
-      showToast("Customer updated");
+      showToast(t("customer.updated"));
       onAdded({ ...customer, ...changes }, "done");
       return;
     }
@@ -102,47 +104,39 @@ export default function AddCustomerModal({
     }
 
     setSaving(false);
-    showToast("Customer added");
+    showToast(t("customer.added"));
     setSavedCustomer(newCustomer);
   }
 
   if (savedCustomer) {
     return (
-      <Modal title="Customer Added" onClose={() => onAdded(savedCustomer, "done")}>
+      <Modal title={t("customer.addedHeading")} onClose={() => onAdded(savedCustomer, "done")}>
         <div className="flex flex-col gap-4">
           <p className="text-senior-base text-ink">
-            <span className="font-bold">{savedCustomer.name}</span> has been added
-            {savedCustomer.current_balance !== 0 && (
-              <>
-                {" "}
-                with an opening balance of{" "}
-                <span className="font-bold">
-                  {Math.abs(savedCustomer.current_balance).toLocaleString("en-PK")}
-                </span>
-                .
-              </>
-            )}
+            <span className="font-bold">{t("customer.hasBeenAdded", { name: savedCustomer.name })}</span>
+            {savedCustomer.current_balance !== 0 &&
+              t("customer.withOpeningBalance", {
+                amount: Math.abs(savedCustomer.current_balance).toLocaleString("en-PK"),
+              })}
           </p>
 
           <Button variant="warning" icon="khata" onClick={() => onAdded(savedCustomer, "give")}>
-            Give Udhaar
+            {t("customer.giveUdhaar")}
           </Button>
           <Button variant="success" icon="cash-in" onClick={() => onAdded(savedCustomer, "receive")}>
-            Receive Payment
+            {t("customer.receivePayment")}
           </Button>
 
           {savedCustomer.phone ? (
             <Button variant="secondary" icon="whatsapp" onClick={() => onAdded(savedCustomer, "whatsapp")}>
-              Send WhatsApp
+              {t("transaction.sendWhatsApp")}
             </Button>
           ) : (
-            <p className="text-senior-xs text-ink-secondary">
-              Add a phone number to send WhatsApp messages to this customer.
-            </p>
+            <p className="text-senior-xs text-ink-secondary">{t("transaction.addPhoneForWhatsApp")}</p>
           )}
 
           <Button variant="ghost" onClick={() => onAdded(savedCustomer, "done")}>
-            Done
+            {t("common.done")}
           </Button>
         </div>
       </Modal>
@@ -150,30 +144,28 @@ export default function AddCustomerModal({
   }
 
   return (
-    <Modal title={isEditing ? "Edit Customer" : "Add Customer"} onClose={onClose}>
+    <Modal title={isEditing ? t("customer.edit") : t("customer.add")} onClose={onClose}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {!isEditing &&
           (contactsPickerAvailable ? (
             <Button variant="secondary" icon="contact" onClick={handlePickContact}>
-              Choose from Contacts
+              {t("customer.chooseFromContacts")}
             </Button>
           ) : (
-            <p className="text-senior-xs text-ink-secondary">
-              Contact picker isn&rsquo;t supported on this device. Enter the number manually.
-            </p>
+            <p className="text-senior-xs text-ink-secondary">{t("customer.contactPickerUnsupported")}</p>
           ))}
 
         <TextField
           id="customer-name"
-          label="Customer name"
+          label={t("customer.name")}
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. Ahmed General Store"
+          placeholder={t("customer.namePlaceholder")}
           autoFocus
         />
         <TextField
           id="customer-phone"
-          label="Phone / WhatsApp (optional)"
+          label={t("customer.phone")}
           type="tel"
           inputMode="numeric"
           value={phone}
@@ -182,26 +174,26 @@ export default function AddCustomerModal({
         />
         <TextField
           id="customer-description"
-          label="Note (optional)"
+          label={t("customer.note")}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="e.g. Regular customer, shop on Main Road"
+          placeholder={t("customer.notePlaceholder")}
         />
 
         {!isEditing && (
           <>
             <SegmentedControl
-              label="Opening balance (optional)"
+              label={t("customer.openingBalance")}
               value={openingDirection}
               onChange={setOpeningDirection}
               options={[
-                { value: "owes", label: "Customer owes me" },
-                { value: "owed", label: "I owe customer" },
+                { value: "owes", label: t("customer.customerOwesMe") },
+                { value: "owed", label: t("customer.iOweCustomer") },
               ]}
             />
             <TextField
               id="customer-opening-balance"
-              label="Opening balance amount"
+              label={t("customer.openingBalanceAmount")}
               type="number"
               inputMode="decimal"
               min="0"
@@ -220,7 +212,7 @@ export default function AddCustomerModal({
         )}
 
         <Button type="submit" loading={saving} fullWidth>
-          {isEditing ? "Save Changes" : "Save Customer"}
+          {isEditing ? t("customer.saveChanges") : t("customer.saveCustomer")}
         </Button>
       </form>
     </Modal>

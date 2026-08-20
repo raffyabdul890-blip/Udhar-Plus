@@ -5,12 +5,12 @@ import Modal from "@/components/ui/Modal";
 import TextField from "@/components/ui/TextField";
 import Button from "@/components/ui/Button";
 import { useToast } from "@/components/ui/ToastProvider";
-import { selectClassName } from "@/components/ui/TextField";
-import BankLogoBadge from "@/components/bank/BankLogoBadge";
-import { FINANCIAL_INSTITUTIONS, PAKISTANI_BANKS, PAKISTANI_WALLETS } from "@/lib/constants/banks";
+import BankSelectField from "@/components/bank/BankSelectField";
+import { FINANCIAL_INSTITUTIONS, PAKISTANI_BANKS } from "@/lib/constants/banks";
 import { recordBankTransaction } from "@/lib/db/ledger";
 import { addBankAccount } from "@/lib/db/offlineStorage";
 import { fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/utils/datetime";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 export default function AddBankAccountModal({
   userId,
@@ -21,6 +21,7 @@ export default function AddBankAccountModal({
   onClose: () => void;
   onAdded: () => void;
 }) {
+  const { t } = usePreferences();
   const showToast = useToast();
   const [bankCode, setBankCode] = useState(PAKISTANI_BANKS[0].code);
   const [accountTitle, setAccountTitle] = useState("");
@@ -66,47 +67,19 @@ export default function AddBankAccountModal({
     }
 
     setSaving(false);
-    showToast("Account added");
+    showToast(t("toast.accountAdded"));
     onAdded();
     onClose();
   }
 
   return (
-    <Modal title="Add Bank / Wallet Account" onClose={onClose}>
+    <Modal title={t("bank.addAccount")} onClose={onClose}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <p className="rounded-xl border border-primary/20 bg-primary-light px-4 py-3 text-senior-xs text-primary">
-          This is a manual ledger — Udhar Plus never connects to your real bank account. You record balances yourself.
+          {t("bank.disclaimer")}
         </p>
 
-        <div className="flex flex-col gap-2">
-          <label htmlFor="bank-select" className="text-senior-base font-medium text-ink">
-            Bank or wallet
-          </label>
-          <div className="flex items-center gap-3">
-            <BankLogoBadge bankCode={bankCode} />
-            <select
-              id="bank-select"
-              value={bankCode}
-              onChange={(e) => setBankCode(e.target.value)}
-              className={`${selectClassName} flex-1`}
-            >
-              <optgroup label="Commercial banks">
-                {PAKISTANI_BANKS.map((bank) => (
-                  <option key={bank.code} value={bank.code}>
-                    {bank.name}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Wallets">
-                {PAKISTANI_WALLETS.map((wallet) => (
-                  <option key={wallet.code} value={wallet.code}>
-                    {wallet.name}
-                  </option>
-                ))}
-              </optgroup>
-            </select>
-          </div>
-        </div>
+        <BankSelectField label={t("bank.chooseBank")} value={bankCode} onChange={setBankCode} />
 
         <TextField
           id="account-title"

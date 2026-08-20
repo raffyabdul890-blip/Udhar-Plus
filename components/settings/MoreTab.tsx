@@ -6,8 +6,11 @@ import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/ToastProvider";
 import { CustomerCardSkeletonList } from "@/components/skeletons/CustomerCardSkeleton";
-import BusinessProfileModal from "@/components/settings/BusinessProfileModal";
+import ProfileModal from "@/components/settings/ProfileModal";
+import ThemeSelector from "@/components/settings/ThemeSelector";
+import LanguageSelector from "@/components/settings/LanguageSelector";
 import LegalModal from "@/components/settings/LegalModal";
+import LogoutButton from "@/components/auth/LogoutButton";
 import {
   getBusinessSettings,
   getPendingSyncCount,
@@ -17,6 +20,8 @@ import {
 import { syncPendingRecords } from "@/lib/sync/syncEngine";
 import { getLastSyncedAt } from "@/lib/sync/syncStatus";
 import { useOnlineStatus } from "@/lib/hooks/useOnlineStatus";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
+import type { ThemePreference } from "@/lib/preferences/localMirror";
 import { TERMS_PARAGRAPHS, PRIVACY_PARAGRAPHS } from "@/lib/legalContent";
 
 function Row({
@@ -34,7 +39,7 @@ function Row({
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-tap w-full items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 text-left transition active:scale-[0.99] active:bg-surface-alt"
+      className="flex min-h-tap w-full items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 text-start transition active:scale-[0.99] active:bg-surface-alt"
     >
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-light text-primary">
         <Icon name={icon} size={18} />
@@ -53,26 +58,29 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
 }
 
 /** Called from event handlers only (never during render) — Date.now() there is fine, just not in the render path. */
-function formatLastSynced(iso: string | null): string {
-  if (!iso) return "Not synced yet";
+function formatLastSynced(t: (key: string) => string, iso: string | null): string {
+  if (!iso) return t("settings.notSyncedYet");
   const diffMs = Date.now() - new Date(iso).getTime();
   const minutes = Math.round(diffMs / 60_000);
-  if (minutes < 1) return "Synced just now";
-  if (minutes < 60) return `Synced ${minutes} min${minutes === 1 ? "" : "s"} ago`;
+  if (minutes < 1) return t("sync.synced");
+  if (minutes < 60) return `${t("sync.synced")} · ${minutes}m`;
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return `Synced ${hours} hour${hours === 1 ? "" : "s"} ago`;
+  if (hours < 24) return `${t("sync.synced")} · ${hours}h`;
   const days = Math.round(hours / 24);
-  return `Synced ${days} day${days === 1 ? "" : "s"} ago`;
+  return `${t("sync.synced")} · ${days}d`;
 }
 
 export default function MoreTab({
   userId,
+  fullName,
   onNavigateToTab,
 }: {
   userId: string;
+  fullName: string | null;
   /** Mobile's bottom nav only fits 5 destinations — Sales/Reports/Bank & Wallet live here instead. */
   onNavigateToTab: (tab: "sales" | "reports" | "bank") => void;
 }) {
+  const { t, setTheme, setLanguage } = usePreferences();
   const showToast = useToast();
   const [settings, setSettings] = useState<LocalBusinessSettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -82,14 +90,14 @@ export default function MoreTab({
   const online = useOnlineStatus();
   const [syncing, setSyncing] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
-  const [lastSyncedLabel, setLastSyncedLabel] = useState("Not synced yet");
+  const [lastSyncedLabel, setLastSyncedLabel] = useState("");
 
   const reload = useCallback(async () => {
     setSettings((await getBusinessSettings(userId)) ?? null);
     setPendingCount(await getPendingSyncCount(userId));
-    setLastSyncedLabel(formatLastSynced(getLastSyncedAt(userId)));
+    setLastSyncedLabel(formatLastSynced(t, getLastSyncedAt(userId)));
     setLoading(false);
-  }, [userId]);
+  }, [userId, t]);
 
   useEffect(() => {
     // Synchronizing with IndexedDB (an external store), not deriving state from props —
@@ -98,8 +106,15 @@ export default function MoreTab({
     reload();
   }, [reload]);
 
-  async function handleLanguageChange(language: "en" | "ur") {
-    const updated = await saveBusinessSettings(userId, { language });
+  async function handleThemeChange(next: ThemePreference) {
+    setTheme(next);
+    const updated = await saveBusinessSettings(userId, { theme: next });
+    setSettings(updated);
+  }
+
+  async function handleLanguageChange(next: "en" | "ur") {
+    setLanguage(next);
+    const updated = await saveBusinessSettings(userId, { language: next });
     setSettings(updated);
   }
 
@@ -108,59 +123,80 @@ export default function MoreTab({
     await syncPendingRecords(userId);
     setSyncing(false);
     setPendingCount(await getPendingSyncCount(userId));
-    setLastSyncedLabel(formatLastSynced(getLastSyncedAt(userId)));
-    showToast("Synced");
+    setLastSyncedLabel(formatLastSynced(t, getLastSyncedAt(userId)));
+    showToast(t("sync.synced"));
   }
 
   if (loading) {
-    return <CustomerCardSkeletonList count={3} label="Loading settings" />;
+    return <CustomerCardSkeletonList count={3} label={t("settings.title")} />;
   }
-
-  const language = settings?.language ?? "en";
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2 lg:hidden">
-        <SectionHeader>More Tools</SectionHeader>
-        <Row icon="sales" title="Sales" detail="Itemized billing history" onClick={() => onNavigateToTab("sales")} />
-        <Row icon="reports" title="Reports" detail="Business performance" onClick={() => onNavigateToTab("reports")} />
-        <Row icon="bank" title="Bank & Wallet" detail="Manual accounts ledger" onClick={() => onNavigateToTab("bank")} />
+        <SectionHeader>{t("settings.moreTools")}</SectionHeader>
+        <Row icon="sales" title={t("nav.sales")} detail={t("settings.salesTool")} onClick={() => onNavigateToTab("sales")} />
+        <Row icon="reports" title={t("nav.reports")} detail={t("settings.reportsTool")} onClick={() => onNavigateToTab("reports")} />
+        <Row icon="bank" title={t("nav.bank")} detail={t("settings.bankTool")} onClick={() => onNavigateToTab("bank")} />
       </div>
 
       <div className="flex flex-col gap-2">
-        <SectionHeader>Business</SectionHeader>
+        <SectionHeader>{t("settings.account")}</SectionHeader>
         <Row
           icon="user"
-          title="Business Profile"
-          detail={settings?.business_name || "Set your business name, address & category"}
+          title={t("settings.profile")}
+          detail={fullName || t("settings.profileDescription")}
+          onClick={() => setShowProfile(true)}
+        />
+        <LogoutButton />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <SectionHeader>{t("settings.business")}</SectionHeader>
+        <Row
+          icon="khata"
+          title={t("settings.businessProfile")}
+          detail={settings?.business_name || t("settings.businessProfileDescription")}
           onClick={() => setShowProfile(true)}
         />
       </div>
 
+      <div className="flex flex-col gap-3">
+        <SectionHeader>{t("settings.appearance")}</SectionHeader>
+        <div className="rounded-xl border border-border bg-surface p-4">
+          <p className="mb-3 text-senior-base font-bold text-ink">{t("settings.language")}</p>
+          <LanguageSelector onChange={handleLanguageChange} />
+        </div>
+        <div className="rounded-xl border border-border bg-surface p-4">
+          <p className="mb-3 text-senior-base font-bold text-ink">{t("settings.theme")}</p>
+          <ThemeSelector onChange={handleThemeChange} />
+        </div>
+      </div>
+
       <div className="flex flex-col gap-2">
-        <SectionHeader>Data</SectionHeader>
+        <SectionHeader>{t("settings.data")}</SectionHeader>
         <div className="rounded-xl border border-border bg-surface p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-senior-base font-bold text-ink">Data Backup</p>
+              <p className="text-senior-base font-bold text-ink">{t("settings.dataBackup")}</p>
               <div className="mt-1 flex items-center gap-2">
-                <Badge variant={online ? "success" : "neutral"}>{online ? "Online" : "Offline"}</Badge>
+                <Badge variant={online ? "success" : "neutral"}>{online ? t("common.online") : t("common.offline")}</Badge>
                 <p className="text-senior-sm text-ink-secondary">
-                  {online ? "Syncs automatically" : "Will sync when back online"}
+                  {online ? t("settings.syncsAutomatically") : t("settings.willSyncWhenOnline")}
                 </p>
               </div>
             </div>
             <Button variant="secondary" size="sm" onClick={handleSyncNow} disabled={syncing || !online}>
-              {syncing ? "Syncing…" : "Sync now"}
+              {syncing ? t("settings.syncing") : t("settings.syncNow")}
             </Button>
           </div>
           <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-            <p className="text-senior-xs text-ink-secondary">
-              {syncing ? "Syncing…" : lastSyncedLabel}
-            </p>
+            <p className="text-senior-xs text-ink-secondary">{syncing ? t("settings.syncing") : lastSyncedLabel}</p>
             {pendingCount > 0 && (
               <Badge variant="warning">
-                {pendingCount} change{pendingCount === 1 ? "" : "s"} pending
+                {t(pendingCount === 1 ? "settings.changesPending" : "settings.changesPendingPlural", {
+                  count: pendingCount,
+                })}
               </Badge>
             )}
           </div>
@@ -168,63 +204,25 @@ export default function MoreTab({
       </div>
 
       <div className="flex flex-col gap-2">
-        <SectionHeader>Preferences</SectionHeader>
-        <div className="rounded-xl border border-border bg-surface p-4">
-          <p className="text-senior-base font-bold text-ink">Language</p>
-          <div className="mt-2 flex gap-2">
-            <button
-              type="button"
-              onClick={() => handleLanguageChange("en")}
-              aria-pressed={language === "en"}
-              className={`min-h-tap flex-1 rounded-lg text-senior-sm font-bold transition-colors ${
-                language === "en" ? "bg-primary text-white" : "bg-surface-alt text-ink-secondary"
-              }`}
-            >
-              English
-            </button>
-            <button
-              type="button"
-              onClick={() => handleLanguageChange("ur")}
-              aria-pressed={language === "ur"}
-              className={`min-h-tap flex-1 rounded-lg text-senior-sm font-bold transition-colors ${
-                language === "ur" ? "bg-primary text-white" : "bg-surface-alt text-ink-secondary"
-              }`}
-            >
-              اردو
-            </button>
-          </div>
-          <p className="mt-2 text-senior-xs text-ink-tertiary">
-            Switches Diye/Milay-style labels app-wide. Full translation is planned for a follow-up update.
-          </p>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <SectionHeader>Security</SectionHeader>
-        <div className="rounded-xl border border-border bg-surface p-4">
-          <p className="text-senior-base font-bold text-ink">Theme</p>
-          <p className="mt-1 text-senior-sm text-ink-secondary">Light (senior-accessible, high contrast)</p>
-          <p className="mt-1 text-senior-xs text-ink-tertiary">
-            A deliberate accessibility choice — clean, high-contrast, easy to read in daylight. Additional
-            themes meeting the same contrast bar may come later.
-          </p>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <SectionHeader>Legal &amp; Help</SectionHeader>
-        <Row icon="file-text" title="Terms & Conditions" onClick={() => setShowTerms(true)} />
-        <Row icon="shield" title="Privacy Policy" onClick={() => setShowPrivacy(true)} />
+        <SectionHeader>{t("settings.legal")}</SectionHeader>
+        <Row icon="file-text" title={t("settings.termsAndConditions")} onClick={() => setShowTerms(true)} />
+        <Row icon="shield" title={t("settings.privacyPolicy")} onClick={() => setShowPrivacy(true)} />
       </div>
 
       {showProfile && (
-        <BusinessProfileModal userId={userId} settings={settings} onClose={() => setShowProfile(false)} onSaved={reload} />
+        <ProfileModal
+          userId={userId}
+          fullName={fullName}
+          settings={settings}
+          onClose={() => setShowProfile(false)}
+          onSaved={reload}
+        />
       )}
       {showTerms && (
-        <LegalModal title="Terms & Conditions" paragraphs={TERMS_PARAGRAPHS} onClose={() => setShowTerms(false)} />
+        <LegalModal title={t("settings.termsAndConditions")} paragraphs={TERMS_PARAGRAPHS} onClose={() => setShowTerms(false)} />
       )}
       {showPrivacy && (
-        <LegalModal title="Privacy Policy" paragraphs={PRIVACY_PARAGRAPHS} onClose={() => setShowPrivacy(false)} />
+        <LegalModal title={t("settings.privacyPolicy")} paragraphs={PRIVACY_PARAGRAPHS} onClose={() => setShowPrivacy(false)} />
       )}
     </div>
   );

@@ -12,6 +12,7 @@ import CustomerTransactionModal, {
 import WhatsAppReminderModal from "@/components/customers/WhatsAppReminderModal";
 import Button from "@/components/ui/Button";
 import { getCustomers, type LocalCustomer } from "@/lib/db/offlineStorage";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 type ActiveModal =
   | { kind: "none" }
@@ -32,6 +33,7 @@ export default function KhataTab({
   pendingAction?: "give" | "receive" | "sale" | "customer" | null;
   onPendingActionHandled?: () => void;
 }) {
+  const { t } = usePreferences();
   const [search, setSearch] = useState("");
   const [customers, setCustomers] = useState<LocalCustomer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -115,7 +117,7 @@ export default function KhataTab({
     <div className="flex flex-col gap-4">
       {!query && <KhataHeaderStats customers={customers} />}
 
-      <SearchBar value={search} onChange={setSearch} placeholder="Search customers, phone, amount…" />
+      <SearchBar value={search} onChange={setSearch} placeholder={t("khata.searchPlaceholder")} />
 
       <CustomerList
         customers={matchedCustomers}
@@ -125,7 +127,7 @@ export default function KhataTab({
 
       {!query && (
         <Button icon="plus" fullWidth onClick={() => setModal({ kind: "add-customer" })}>
-          Add Customer
+          {t("khata.addCustomer")}
         </Button>
       )}
 
@@ -136,7 +138,11 @@ export default function KhataTab({
         <PickCustomerModal
           customers={customers}
           title={
-            modal.purpose === "give" ? "Give Udhaar — Choose Customer" : modal.purpose === "receive" ? "Receive Payment — Choose Customer" : "New Sale — Choose Customer"
+            modal.purpose === "give"
+              ? t("khata.pickCustomerGive")
+              : modal.purpose === "receive"
+                ? t("khata.pickCustomerReceive")
+                : t("khata.pickCustomerSale")
           }
           onClose={closeModal}
           onPick={(customer) => openTxnForPurpose(customer.id, modal.purpose)}

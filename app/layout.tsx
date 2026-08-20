@@ -1,9 +1,27 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import SyncManagerMount from "@/components/sync/SyncManagerMount";
 import ServiceWorkerMount from "@/components/sync/ServiceWorkerMount";
 import ToastProvider from "@/components/ui/ToastProvider";
+import PreferencesProvider from "@/components/providers/PreferencesProvider";
 import "./globals.css";
+
+// Runs before hydration so <html data-theme>/dir/lang are correct on first
+// paint — no flash of the wrong theme or of an LTR layout that then flips to
+// RTL. Reads localStorage directly (a Dexie/IndexedDB read is always async,
+// and this must not be) via the same keys lib/preferences/localMirror.ts
+// uses. Kept as a raw string deliberately: it has to run before any app
+// module is evaluated, so it can't import one.
+const THEME_INIT_SCRIPT = `(function(){try{
+var t=localStorage.getItem('udhar-plus-theme');
+if(t!=='light'&&t!=='dark'&&t!=='system')t='light';
+var r=t==='system'?(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):t;
+document.documentElement.dataset.theme=r;
+var l=localStorage.getItem('udhar-plus-language')==='ur'?'ur':'en';
+document.documentElement.lang=l;
+document.documentElement.dir=l==='ur'?'rtl':'ltr';
+}catch(e){}})();`;
 
 const inter = Inter({
   subsets: ["latin"],
@@ -49,11 +67,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={inter.variable}>
-      <body className="min-h-screen bg-canvas font-sans text-ink">
-        <ServiceWorkerMount />
-        <SyncManagerMount />
-        <ToastProvider>{children}</ToastProvider>
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
+      <body className="min-h-screen bg-canvas font-sans text-ink" suppressHydrationWarning>
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
+        />
+        <PreferencesProvider>
+          <ServiceWorkerMount />
+          <SyncManagerMount />
+          <ToastProvider>{children}</ToastProvider>
+        </PreferencesProvider>
       </body>
     </html>
   );

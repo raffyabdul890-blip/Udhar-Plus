@@ -62,7 +62,7 @@ export default function Modal({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="absolute right-4 top-4 z-10 flex min-h-tap min-w-tap items-center justify-center rounded-full bg-surface/90 text-ink-secondary shadow-card transition active:scale-95"
+            className="absolute end-4 top-4 z-10 flex min-h-tap min-w-tap items-center justify-center rounded-full bg-surface/90 text-ink-secondary shadow-card transition active:scale-95"
           >
             <Icon name="close" size={20} />
           </button>

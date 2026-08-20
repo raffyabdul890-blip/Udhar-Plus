@@ -3,6 +3,70 @@
 @tailwind utilities;
 
 @layer base {
+  /*
+   * Every color in tailwind.config.ts resolves to one of these custom
+   * properties rather than a fixed hex value — this is the entire dark-theme
+   * mechanism. No component markup needs a `dark:` variant: a card already
+   * written as `bg-surface border-border` re-themes automatically the moment
+   * `data-theme` flips, because `bg-surface` compiles to `background-color:
+   * var(--color-surface)`.
+   *
+   * Light values live on :root (the default). Dark values are scoped under
+   * [data-theme="dark"], set on <html> by the blocking inline script in
+   * app/layout.tsx before first paint — never by a CSS media query — so
+   * "system" can resolve once, synchronously, with no flash of the wrong
+   * theme and no hydration mismatch.
+   */
+  :root {
+    --color-canvas: #f7f7f8;
+    --color-surface: #ffffff;
+    --color-surface-alt: #f3f4f6;
+    --color-surface-dim: #ededf0;
+    --color-border: #e5e7eb;
+    --color-border-strong: #d1d5db;
+    --color-ink: #171717;
+    --color-ink-secondary: #6b7280;
+    --color-ink-tertiary: #9ca3af;
+    --color-primary: #6d4aff;
+    --color-primary-dark: #5b3ae0;
+    --color-primary-light: #f1eeff;
+    --color-success: #16a34a;
+    --color-success-dark: #15803d;
+    --color-success-light: #dcfce7;
+    --color-danger: #dc2626;
+    --color-danger-dark: #b91c1c;
+    --color-danger-light: #fee2e2;
+    --color-warning: #d97706;
+    --color-warning-light: #fef3c7;
+    --shadow-color: 23, 23, 23;
+    color-scheme: light;
+  }
+
+  [data-theme="dark"] {
+    --color-canvas: #0b0c10;
+    --color-surface: #17181f;
+    --color-surface-alt: #1f212b;
+    --color-surface-dim: #1a1c24;
+    --color-border: #2b2d38;
+    --color-border-strong: #3c3f4e;
+    --color-ink: #f2f2f5;
+    --color-ink-secondary: #a3a6b5;
+    --color-ink-tertiary: #6e7180;
+    --color-primary: #8b6fff;
+    --color-primary-dark: #6d4aff;
+    --color-primary-light: #241b47;
+    --color-success: #22c55e;
+    --color-success-dark: #4ade80;
+    --color-success-light: #123322;
+    --color-danger: #ef4444;
+    --color-danger-dark: #f87171;
+    --color-danger-light: #3a1518;
+    --color-warning: #f59e0b;
+    --color-warning-light: #3d2a0a;
+    --shadow-color: 0, 0, 0;
+    color-scheme: dark;
+  }
+
   html {
     /* Bumps the rem baseline from 16px to 18px so every Tailwind rem-based
        utility scales up for senior-friendly readability (see FRONTEND_UI.md). */
@@ -12,6 +76,7 @@
   body {
     @apply bg-canvas text-ink antialiased;
     font-variant-numeric: tabular-nums;
+    transition: background-color 150ms ease-out, color 150ms ease-out;
   }
 
   :focus-visible {

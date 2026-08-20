@@ -9,12 +9,14 @@ import SearchBar from "@/components/dashboard/SearchBar";
 import { CustomerCardSkeletonList } from "@/components/skeletons/CustomerCardSkeleton";
 import AddItemModal from "@/components/items/AddItemModal";
 import { deleteItem, getItems, type LocalItem } from "@/lib/db/offlineStorage";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 type ModalState = { kind: "none" } | { kind: "add" } | { kind: "edit"; item: LocalItem };
 
 const DEFAULT_LOW_STOCK_THRESHOLD = 5;
 
 export default function ItemsTab({ userId }: { userId: string }) {
+  const { t } = usePreferences();
   const [items, setItems] = useState<LocalItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -49,14 +51,14 @@ export default function ItemsTab({ userId }: { userId: string }) {
   return (
     <div className="flex flex-col gap-4">
       {loading ? (
-        <CustomerCardSkeletonList count={3} label="Loading items" />
+        <CustomerCardSkeletonList count={3} label={t("items.title")} />
       ) : items.length === 0 ? (
-        <EmptyState icon="items" title="No items yet" description="Add your first product to start tracking stock." />
+        <EmptyState icon="items" title={t("items.noItems")} description={t("items.noItemsDescription")} />
       ) : (
         <>
-          <SearchBar value={search} onChange={setSearch} placeholder="Search items…" />
+          <SearchBar value={search} onChange={setSearch} placeholder={t("items.searchPlaceholder")} />
           {matchedItems.length === 0 ? (
-            <EmptyState icon="items" title="No items found" description="Try a different search." />
+            <EmptyState icon="items" title={t("items.noItemsFound")} description={t("items.noItemsFoundDescription")} />
           ) : (
             <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {matchedItems.map((item) => {
@@ -67,16 +69,18 @@ export default function ItemsTab({ userId }: { userId: string }) {
                     <button
                       type="button"
                       onClick={() => setModal({ kind: "edit", item })}
-                      className="flex min-h-tap w-full flex-col gap-2 rounded-xl border border-border bg-surface p-4 text-left shadow-card transition active:scale-[0.99] active:bg-surface-alt"
+                      className="flex min-h-tap w-full flex-col gap-2 rounded-xl border border-border bg-surface p-4 text-start shadow-card transition active:scale-[0.99] active:bg-surface-alt"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <span className="truncate text-senior-base font-bold text-ink">{item.name}</span>
-                        {lowStock && <Badge variant="warning">Low stock</Badge>}
+                        {lowStock && <Badge variant="warning">{t("items.lowStock")}</Badge>}
                       </div>
-                      <span className="text-senior-sm text-ink-secondary">Stock: {item.stock_quantity}</span>
+                      <span className="text-senior-sm text-ink-secondary">
+                        {t("items.stock")}: {item.stock_quantity}
+                      </span>
                       {item.selling_price != null && (
                         <span className="text-senior-xs text-ink-tertiary">
-                          Sells at {item.selling_price.toLocaleString("en-PK")}
+                          {t("items.sellsAt")} {item.selling_price.toLocaleString("en-PK")}
                         </span>
                       )}
                     </button>
@@ -89,7 +93,7 @@ export default function ItemsTab({ userId }: { userId: string }) {
       )}
 
       <Button icon="plus" fullWidth onClick={() => setModal({ kind: "add" })}>
-        Add Item
+        {t("items.addItem")}
       </Button>
 
       {(modal.kind === "add" || modal.kind === "edit") && (
@@ -111,8 +115,8 @@ export default function ItemsTab({ userId }: { userId: string }) {
 
       {pendingDelete && (
         <ConfirmDialog
-          title="Delete item?"
-          message={`This removes ${pendingDelete.name} from your inventory. This can't be undone.`}
+          title={t("items.deleteItemTitle")}
+          message={t("items.deleteItemMessage", { name: pendingDelete.name })}
           onConfirm={handleConfirmDelete}
           onCancel={() => setPendingDelete(null)}
         />

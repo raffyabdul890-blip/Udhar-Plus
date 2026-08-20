@@ -15,6 +15,7 @@ import ReportsTab from "@/components/reports/ReportsTab";
 import BankWalletTab from "@/components/bank/BankWalletTab";
 import MoreTab from "@/components/settings/MoreTab";
 import { isOnboardingCompleteLocally } from "@/lib/onboarding";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 export type QuickActionId = "give" | "receive" | "customer" | "expense" | "sale";
 
@@ -52,9 +53,10 @@ export default function DashboardShell({
     window.scrollTo(0, 0);
   }, [activeTab]);
 
+  const { t } = usePreferences();
   const needsOnboarding = !onboardingCompleted;
   const primaryLabel = shopName ?? fullName ?? "Udhar Plus";
-  const sectionTitle = NAV_ITEMS.find((t) => t.id === activeTab)?.label ?? "Udhar Plus";
+  const sectionTitle = NAV_ITEMS.some((item) => item.id === activeTab) ? t(`nav.${activeTab}`) : "Udhar Plus";
 
   function handleQuickAction(action: QuickActionId) {
     setActiveTab(action === "expense" ? "cashbook" : "khata");
@@ -109,7 +111,9 @@ export default function DashboardShell({
           {activeTab === "items" && <ItemsTab userId={userId} />}
           {activeTab === "reports" && <ReportsTab userId={userId} shopLabel={primaryLabel} />}
           {activeTab === "bank" && <BankWalletTab userId={userId} />}
-          {activeTab === "more" && <MoreTab userId={userId} onNavigateToTab={setActiveTab} />}
+          {activeTab === "more" && (
+            <MoreTab userId={userId} fullName={fullName} onNavigateToTab={setActiveTab} />
+          )}
         </div>
       </div>
 

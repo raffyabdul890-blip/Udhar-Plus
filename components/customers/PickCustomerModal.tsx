@@ -6,11 +6,12 @@ import SearchBar from "@/components/dashboard/SearchBar";
 import AvatarInitial from "@/components/ui/AvatarInitial";
 import EmptyState from "@/components/ui/EmptyState";
 import type { LocalCustomer } from "@/lib/db/offlineStorage";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 /** Customer-picker used by quick actions that need a customer but don't start from one (Dashboard, Sales "+ New Sale"). */
 export default function PickCustomerModal({
   customers,
-  title = "Choose Customer",
+  title,
   onClose,
   onPick,
   onAddNew,
@@ -21,6 +22,7 @@ export default function PickCustomerModal({
   onPick: (customer: LocalCustomer) => void;
   onAddNew: () => void;
 }) {
+  const { t } = usePreferences();
   const [search, setSearch] = useState("");
 
   const filtered = useMemo(() => {
@@ -32,20 +34,20 @@ export default function PickCustomerModal({
   }, [customers, search]);
 
   return (
-    <Modal title={title} onClose={onClose}>
+    <Modal title={title ?? t("customer.chooseCustomer")} onClose={onClose}>
       <div className="flex flex-col gap-4">
-        <SearchBar value={search} onChange={setSearch} placeholder="Search customers…" />
+        <SearchBar value={search} onChange={setSearch} placeholder={t("customer.searchPlaceholder")} />
 
         <button
           type="button"
           onClick={onAddNew}
           className="flex min-h-tap items-center justify-center rounded-xl border border-dashed border-primary/50 bg-primary-light px-4 text-senior-sm font-bold text-primary transition active:scale-[0.98]"
         >
-          + Add New Customer
+          {t("customer.addNewCustomer")}
         </button>
 
         {filtered.length === 0 ? (
-          <EmptyState icon="users" title="No customers found" description="Try a different search, or add a new customer." />
+          <EmptyState icon="users" title={t("customer.noCustomersFound")} description={t("customer.noCustomersFoundDescription")} />
         ) : (
           <ul className="flex max-h-96 flex-col gap-2 overflow-y-auto">
             {filtered.map((customer) => (
@@ -53,7 +55,7 @@ export default function PickCustomerModal({
                 <button
                   type="button"
                   onClick={() => onPick(customer)}
-                  className="flex min-h-tap w-full items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2 text-left transition active:scale-[0.99] active:bg-surface-alt"
+                  className="flex min-h-tap w-full items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2 text-start transition active:scale-[0.99] active:bg-surface-alt"
                 >
                   <AvatarInitial name={customer.name} size="sm" />
                   <div className="flex flex-1 flex-col overflow-hidden">

@@ -1,15 +1,16 @@
 "use client";
 
 import Icon, { type IconName } from "@/components/icons/Icon";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 export type QuickActionId = "give" | "receive" | "customer" | "expense" | "sale";
 
-const TILES: { id: QuickActionId; icon: IconName; label: string; tint: string }[] = [
-  { id: "give", icon: "khata", label: "Give Udhaar", tint: "bg-danger-light text-danger-dark" },
-  { id: "receive", icon: "cash-in", label: "Receive Payment", tint: "bg-success-light text-success-dark" },
-  { id: "customer", icon: "user", label: "Add Customer", tint: "bg-primary-light text-primary" },
-  { id: "expense", icon: "cash-out", label: "+ Expense", tint: "bg-warning-light text-warning" },
-  { id: "sale", icon: "sales", label: "+ Sale", tint: "bg-primary-light text-primary" },
+const TILES: { id: QuickActionId; icon: IconName; labelKey: string; tint: string }[] = [
+  { id: "give", icon: "khata", labelKey: "dashboard.giveUdhaar", tint: "bg-danger-light text-danger-dark" },
+  { id: "receive", icon: "cash-in", labelKey: "dashboard.receivePayment", tint: "bg-success-light text-success-dark" },
+  { id: "customer", icon: "user", labelKey: "dashboard.addCustomer", tint: "bg-primary-light text-primary" },
+  { id: "expense", icon: "cash-out", labelKey: "dashboard.addExpense", tint: "bg-warning-light text-warning" },
+  { id: "sale", icon: "sales", labelKey: "dashboard.newSale", tint: "bg-primary-light text-primary" },
 ];
 
 export default function QuickActions({
@@ -17,6 +18,8 @@ export default function QuickActions({
 }: {
   onAction: (id: QuickActionId) => void;
 }) {
+  const { t } = usePreferences();
+
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
       {TILES.map((tile, i) => (
@@ -31,7 +34,7 @@ export default function QuickActions({
           <span className={`flex h-11 w-11 items-center justify-center rounded-full ${tile.tint}`}>
             <Icon name={tile.icon} size={22} />
           </span>
-          <span className="text-senior-sm font-bold text-ink">{tile.label}</span>
+          <span className="text-senior-sm font-bold text-ink">{t(tile.labelKey)}</span>
         </button>
       ))}
     </div>

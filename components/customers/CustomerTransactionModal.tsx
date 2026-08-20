@@ -46,6 +46,7 @@ import {
   type LocalItem,
   type LocalTransaction,
 } from "@/lib/db/offlineStorage";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 export type EntryType = "DIYE" | "MILAY" | "SETTLE";
 type Stage = "choose" | "form";
@@ -87,6 +88,7 @@ export default function CustomerTransactionModal({
   onSaved: () => void;
   onDeleted: () => void;
 }) {
+  const { t } = usePreferences();
   const showToast = useToast();
   const isQuickAction = Boolean(initialEntryType);
   const [stage, setStage] = useState<Stage>(isQuickAction ? "form" : "choose");
@@ -181,13 +183,13 @@ export default function CustomerTransactionModal({
 
     if (!editingTransaction && entryType === "SETTLE") {
       if (customer.current_balance === 0) {
-        setError("This customer's account is already settled.");
+        setError(t("customer.alreadySettled"));
         return;
       }
       setSaving(true);
       await settleCustomerBalance(customer, transactionDate);
       setSaving(false);
-      showToast("Balance settled");
+      showToast(t("transaction.balanceSettled"));
       onSaved();
       resetForm();
       await reloadHistory();
@@ -197,7 +199,7 @@ export default function CustomerTransactionModal({
 
     const parsedAmount = Number(amount) || 0;
     if (parsedAmount <= 0) {
-      setError("Enter an amount greater than zero.");
+      setError(t("transaction.errorAmount"));
       return;
     }
 
@@ -206,7 +208,11 @@ export default function CustomerTransactionModal({
         ? bankAccounts.find((a) => a.id === paymentAccountId)
         : undefined;
     if (entryType === "MILAY" && paymentMethod !== "cash" && !selectedAccount) {
-      setError(`Choose which ${paymentMethod} account received this payment.`);
+      setError(
+        t("transaction.chooseAccountMethod", {
+          method: t(paymentMethod === "bank" ? "transaction.bank" : "transaction.wallet"),
+        })
+      );
       return;
     }
 
@@ -263,7 +269,7 @@ export default function CustomerTransactionModal({
       return;
     }
 
-    showToast("Entry updated");
+    showToast(t("transaction.entryUpdated"));
     resetForm();
     onClose();
   }
@@ -311,7 +317,7 @@ export default function CustomerTransactionModal({
   if (receipt) {
     return (
       <Modal
-        title="Bill Saved"
+        title={t("transaction.billSaved")}
         onClose={() => {
           setReceipt(null);
           onClose();
@@ -322,7 +328,7 @@ export default function CustomerTransactionModal({
             {receipt.items.map((item) => (
               <div key={item.id} className="flex justify-between gap-3 text-senior-sm text-ink">
                 <span className="truncate">
-                  {item.name || "Item"} x{item.quantity}
+                  {item.name || t("transaction.item")} x{item.quantity}
                   {item.unit ? ` ${item.unit}` : ""}
                 </span>
                 <span className="shrink-0">
@@ -331,7 +337,7 @@ export default function CustomerTransactionModal({
               </div>
             ))}
             <div className="mt-2 flex justify-between border-t border-border pt-2 text-senior-base font-bold text-ink">
-              <span>Total</span>
+              <span>{t("transaction.total")}</span>
               <span>{receipt.total.toLocaleString("en-PK")}</span>
             </div>
           </div>
@@ -343,16 +349,14 @@ export default function CustomerTransactionModal({
             onClick={() => setShowReceiptWhatsApp(true)}
             disabled={!customer.phone}
           >
-            Share via WhatsApp
+            {t("transaction.shareViaWhatsApp")}
           </Button>
           {!customer.phone && (
-            <p className="text-senior-xs text-ink-secondary">
-              Add a phone number to share this bill on WhatsApp.
-            </p>
+            <p className="text-senior-xs text-ink-secondary">{t("transaction.addPhoneForBill")}</p>
           )}
 
           <Button variant="secondary" icon="download" fullWidth onClick={handleDownloadReceiptBill}>
-            Download Bill
+            {t("transaction.downloadBill")}
           </Button>
 
           <Button
@@ -363,14 +367,14 @@ export default function CustomerTransactionModal({
               onClose();
             }}
           >
-            Done
+            {t("common.done")}
           </Button>
         </div>
 
         {showReceiptWhatsApp && (
           <WhatsAppReminderModal
             customer={customer}
-            title={`Share Bill with ${customer.name}`}
+            title={t("transaction.shareBillWith", { name: customer.name })}
             presetMessage={buildItemizedReceiptMessage(
               customer.name,
               receipt.items,
@@ -391,8 +395,20 @@ export default function CustomerTransactionModal({
 
   if (savedEntry) {
     const isGiven = savedEntry.type === "OUT";
+    const balanceMessage =
+      savedEntry.balanceAfter > 0
+        ? t("transaction.balanceUpdatedOwes", {
+            name: customer.name,
+            amount: savedEntry.balanceAfter.toLocaleString("en-PK"),
+          })
+        : savedEntry.balanceAfter < 0
+          ? t("transaction.balanceUpdatedOwed", {
+              name: customer.name,
+              amount: Math.abs(savedEntry.balanceAfter).toLocaleString("en-PK"),
+            })
+          : t("transaction.balanceUpdatedSettled", { name: customer.name });
     return (
-      <Modal title={isGiven ? "Udhaar Saved" : "Payment Received"} onClose={onClose}>
+      <Modal title={isGiven ? t("transaction.udhaarSaved") : t("transaction.paymentReceived")} onClose={onClose}>
         <div className="flex animate-fade-in-up flex-col items-center gap-4 text-center">
           <span
             className={`flex h-14 w-14 items-center justify-center rounded-full ${
@@ -405,14 +421,7 @@ export default function CustomerTransactionModal({
             value={savedEntry.amount}
             className={`text-senior-3xl font-bold ${isGiven ? "text-warning" : "text-success-dark"}`}
           />
-          <p className="text-senior-sm text-ink-secondary">
-            Balance updated — {customer.name} now{" "}
-            {savedEntry.balanceAfter > 0
-              ? `owes Rs. ${savedEntry.balanceAfter.toLocaleString("en-PK")}`
-              : savedEntry.balanceAfter < 0
-                ? `is owed Rs. ${Math.abs(savedEntry.balanceAfter).toLocaleString("en-PK")}`
-                : "is settled"}
-          </p>
+          <p className="text-senior-sm text-ink-secondary">{balanceMessage}</p>
 
           <div className="flex w-full flex-col gap-3">
             <Button
@@ -422,12 +431,10 @@ export default function CustomerTransactionModal({
               onClick={() => setShowSavedEntryWhatsApp(true)}
               disabled={!customer.phone}
             >
-              Send WhatsApp
+              {t("transaction.sendWhatsApp")}
             </Button>
             {!customer.phone && (
-              <p className="text-senior-xs text-ink-secondary">
-                Add a phone number to notify this customer on WhatsApp.
-              </p>
+              <p className="text-senior-xs text-ink-secondary">{t("transaction.addPhoneForWhatsApp")}</p>
             )}
             <Button
               variant="ghost"
@@ -437,7 +444,7 @@ export default function CustomerTransactionModal({
                 onClose();
               }}
             >
-              Done
+              {t("common.done")}
             </Button>
           </div>
         </div>
@@ -465,7 +472,11 @@ export default function CustomerTransactionModal({
         ? "bg-primary text-white"
         : "bg-warning text-white";
   const bannerLabel =
-    entryType === "MILAY" ? "Receive Payment from" : entryType === "SETTLE" ? "Settle Balance with" : "Give Udhaar to";
+    entryType === "MILAY"
+      ? t("transaction.receivePaymentFrom")
+      : entryType === "SETTLE"
+        ? t("transaction.settleBalanceWith")
+        : t("transaction.giveUdhaarTo");
   const canGoBack = !isQuickAction && !editingTransaction;
 
   return (
@@ -485,10 +496,10 @@ export default function CustomerTransactionModal({
           <div className="rounded-2xl border border-border bg-surface-alt p-5 text-center">
             <p className="text-senior-sm font-medium text-ink-secondary">
               {customer.current_balance > 0
-                ? "You Will Receive"
+                ? t("customer.youWillReceive")
                 : customer.current_balance < 0
-                  ? "You Will Pay"
-                  : "Settled"}
+                  ? t("customer.youWillPay")
+                  : t("customer.settled")}
             </p>
             <Amount
               value={Math.abs(customer.current_balance)}
@@ -504,13 +515,13 @@ export default function CustomerTransactionModal({
 
           <div className="flex gap-2">
             <Button variant="ghost" size="sm" icon="whatsapp" className="flex-1" onClick={() => setShowReminder(true)}>
-              Remind
+              {t("customer.remind")}
             </Button>
             <Button variant="ghost" size="sm" icon="file-text" className="flex-1" onClick={() => setShowExportSummary(true)}>
-              Export
+              {t("customer.export")}
             </Button>
             <Button variant="ghost" size="sm" icon="edit" className="flex-1" onClick={() => setShowEditCustomer(true)}>
-              Edit
+              {t("common.edit")}
             </Button>
           </div>
 
@@ -523,7 +534,7 @@ export default function CustomerTransactionModal({
                 setStage("form");
               }}
             >
-              Give Udhaar
+              {t("customer.giveUdhaar")}
             </Button>
             <Button
               variant="success"
@@ -533,7 +544,7 @@ export default function CustomerTransactionModal({
                 setStage("form");
               }}
             >
-              Receive Payment
+              {t("customer.receivePayment")}
             </Button>
           </div>
 
@@ -546,13 +557,13 @@ export default function CustomerTransactionModal({
               }}
               className="text-center text-senior-sm font-bold text-primary underline underline-offset-2"
             >
-              Settle full balance
+              {t("customer.settleFullBalance")}
             </button>
           )}
 
           {sortedHistory.length > 0 && (
             <div className="flex flex-col gap-2 border-t border-border pt-4">
-              <h3 className="text-senior-sm font-bold text-ink-secondary">Recent entries</h3>
+              <h3 className="text-senior-sm font-bold text-ink-secondary">{t("customer.recentEntries")}</h3>
               <ul className="flex max-h-64 flex-col gap-2 overflow-y-auto">
                 {sortedHistory.map((txn) => (
                   <li key={txn.id} className="flex items-center gap-3 rounded-xl bg-surface-alt px-3 py-2">
@@ -563,7 +574,7 @@ export default function CustomerTransactionModal({
                           txn.type === "OUT" ? "text-danger" : "text-success-dark"
                         }`}
                       >
-                        {txn.type === "OUT" ? "Udhaar (Diye)" : "Jama (Milay)"} ·{" "}
+                        {txn.type === "OUT" ? t("customer.udhaarDiye") : t("customer.jamaMilay")} ·{" "}
                         {txn.amount.toLocaleString("en-PK")}
                       </span>
                       <span className="truncate text-senior-xs text-ink-secondary">
@@ -572,15 +583,17 @@ export default function CustomerTransactionModal({
                       </span>
                       {txn.items && txn.items.length > 0 && (
                         <span className="truncate text-senior-xs text-ink-tertiary">
-                          {txn.items.length} item{txn.items.length > 1 ? "s" : ""}:{" "}
-                          {txn.items.map((item) => item.name || "—").join(", ")}
+                          {t(txn.items.length === 1 ? "customer.itemsCount" : "customer.itemsCountPlural", {
+                            count: txn.items.length,
+                          })}
+                          : {txn.items.map((item) => item.name || "—").join(", ")}
                         </span>
                       )}
                     </div>
                     <button
                       type="button"
                       onClick={() => startEdit(txn)}
-                      aria-label="Edit entry"
+                      aria-label={t("customer.editEntryLabel")}
                       className="flex min-h-tap min-w-tap shrink-0 items-center justify-center rounded-xl text-ink-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                     >
                       <Icon name="edit" size={18} />
@@ -588,7 +601,7 @@ export default function CustomerTransactionModal({
                     <button
                       type="button"
                       onClick={() => setPendingDelete({ kind: "transaction", transaction: txn })}
-                      aria-label="Delete entry"
+                      aria-label={t("customer.deleteEntryLabel")}
                       className="flex min-h-tap min-w-tap shrink-0 items-center justify-center rounded-xl text-ink-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                     >
                       <Icon name="trash" size={18} />
@@ -600,7 +613,7 @@ export default function CustomerTransactionModal({
           )}
 
           <Button variant="danger" size="sm" onClick={() => setPendingDelete({ kind: "customer" })}>
-            Delete customer
+            {t("customer.deleteCustomer")}
           </Button>
         </div>
       ) : (
@@ -613,7 +626,7 @@ export default function CustomerTransactionModal({
                 className="mb-1 flex items-center gap-1 self-start text-senior-sm font-bold opacity-90"
               >
                 <Icon name="chevron-left" size={18} />
-                Back
+                {t("transaction.back")}
               </button>
             )}
             <p className="text-senior-sm font-medium opacity-85">{bannerLabel}</p>
@@ -622,12 +635,12 @@ export default function CustomerTransactionModal({
 
           {editingTransaction && (
             <SegmentedControl
-              label="Entry type"
+              label={t("transaction.entryType")}
               value={entryType}
               onChange={setEntryType}
               options={[
-                { value: "DIYE", label: "Udhaar (Give)" },
-                { value: "MILAY", label: "Payment (Receive)" },
+                { value: "DIYE", label: t("transaction.udhaarGive") },
+                { value: "MILAY", label: t("transaction.paymentReceive") },
               ]}
             />
           )}
@@ -636,7 +649,7 @@ export default function CustomerTransactionModal({
             <>
               <div className="flex flex-col gap-2">
                 <label htmlFor="txn-amount" className="text-senior-base font-medium text-ink">
-                  Amount
+                  {t("transaction.amount")}
                 </label>
                 <div className="flex min-h-tap items-center gap-2 rounded-xl border border-border bg-surface px-4 focus-within:border-primary focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary">
                   <span className="text-senior-lg font-bold text-ink-tertiary">Rs.</span>
@@ -658,7 +671,7 @@ export default function CustomerTransactionModal({
               {showItems ? (
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-senior-base font-medium text-ink">Items</span>
+                    <span className="text-senior-base font-medium text-ink">{t("transaction.items")}</span>
                     <button
                       type="button"
                       onClick={() => {
@@ -667,14 +680,14 @@ export default function CustomerTransactionModal({
                       }}
                       className="text-senior-xs font-medium text-ink-secondary underline"
                     >
-                      Remove items
+                      {t("transaction.removeItems")}
                     </button>
                   </div>
                   <ItemizedEntryFields items={items} catalogItems={catalogItems} onChange={handleItemsChange} />
                 </div>
               ) : (
                 <Button variant="secondary" size="sm" icon="receipt" onClick={() => setShowItems(true)}>
-                  Add Items
+                  {t("transaction.addItems")}
                 </Button>
               )}
             </>
@@ -683,27 +696,27 @@ export default function CustomerTransactionModal({
           {entryType === "MILAY" && (
             <div className="flex flex-col gap-2">
               <SegmentedControl
-                label="Payment method"
+                label={t("transaction.paymentMethod")}
                 value={paymentMethod}
                 onChange={(value) => {
                   setPaymentMethod(value);
                   setPaymentAccountId("");
                 }}
                 options={[
-                  { value: "cash", label: "Cash" },
-                  { value: "bank", label: "Bank" },
-                  { value: "wallet", label: "Wallet" },
+                  { value: "cash", label: t("transaction.cash") },
+                  { value: "bank", label: t("transaction.bank") },
+                  { value: "wallet", label: t("transaction.wallet") },
                 ]}
               />
               {paymentMethod !== "cash" && (
                 accountOptions.length > 0 ? (
                   <select
-                    aria-label={`Choose ${paymentMethod} account`}
+                    aria-label={t("bank.accountType")}
                     value={paymentAccountId}
                     onChange={(e) => setPaymentAccountId(e.target.value)}
                     className={selectClassName}
                   >
-                    <option value="">— Choose account —</option>
+                    <option value="">{t("transaction.chooseAccount")}</option>
                     {accountOptions.map((a) => (
                       <option key={a.id} value={a.id}>
                         {a.account_title} ({a.bank_name})
@@ -712,7 +725,7 @@ export default function CustomerTransactionModal({
                   </select>
                 ) : (
                   <p className="text-senior-xs text-ink-secondary">
-                    No {paymentMethod} account yet — add one in Bank &amp; Wallet first.
+                    {t("transaction.noAccountYet", { method: t(`transaction.${paymentMethod}`) })}
                   </p>
                 )
               )}
@@ -721,7 +734,7 @@ export default function CustomerTransactionModal({
 
           <TextField
             id="txn-date"
-            label="Date & time"
+            label={t("transaction.dateTime")}
             type="datetime-local"
             value={dateValue}
             onChange={(e) => setDateValue(e.target.value)}
@@ -731,10 +744,10 @@ export default function CustomerTransactionModal({
             <>
               <TextField
                 id="txn-note"
-                label="Description (optional)"
+                label={t("transaction.description")}
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="e.g. 2 bags of flour"
+                placeholder={t("transaction.descriptionPlaceholder")}
               />
 
               <PhotoAttachment
@@ -759,17 +772,17 @@ export default function CustomerTransactionModal({
             fullWidth
           >
             {editingTransaction
-              ? "Update Entry"
+              ? t("transaction.updateEntry")
               : entryType === "DIYE"
-                ? "Save Udhaar"
+                ? t("transaction.saveUdhaar")
                 : entryType === "MILAY"
-                  ? "Save Payment"
-                  : "Confirm Settle"}
+                  ? t("transaction.savePayment")
+                  : t("transaction.confirmSettle")}
           </Button>
 
           {editingTransaction && (
             <Button variant="ghost" fullWidth onClick={resetForm}>
-              Cancel edit
+              {t("transaction.cancelEdit")}
             </Button>
           )}
         </form>
@@ -777,11 +790,11 @@ export default function CustomerTransactionModal({
 
       {pendingDelete && (
         <ConfirmDialog
-          title={pendingDelete.kind === "customer" ? "Delete customer?" : "Delete entry?"}
+          title={pendingDelete.kind === "customer" ? t("customer.deleteCustomerTitle") : t("customer.deleteEntryTitle")}
           message={
             pendingDelete.kind === "customer"
-              ? `This removes ${customer.name} and their entire transaction history. This can't be undone.`
-              : "This removes the entry and adjusts the balance. This can't be undone."
+              ? t("customer.deleteCustomerMessage", { name: customer.name })
+              : t("customer.deleteEntryMessage")
           }
           onConfirm={handleConfirmDelete}
           onCancel={() => setPendingDelete(null)}
