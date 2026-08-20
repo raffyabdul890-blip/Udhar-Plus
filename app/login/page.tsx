@@ -9,6 +9,7 @@ import Icon from "@/components/icons/Icon";
 import { createClient } from "@/lib/supabase/client";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import { hydrateFromCloud } from "@/lib/sync/syncEngine";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 type AuthMethod = "phone" | "email";
 type Step = "identifier" | "otp";
@@ -25,6 +26,7 @@ function errorMessage(err: unknown, fallback: string): string {
 
 export default function LoginPage() {
   const router = useRouter();
+  const { t } = usePreferences();
   const [method, setMethod] = useState<AuthMethod>("phone");
   const [step, setStep] = useState<Step>("identifier");
   const [phoneDigits, setPhoneDigits] = useState("");
@@ -37,7 +39,6 @@ export default function LoginPage() {
   const confirmationResultRef = useRef<ConfirmationResult | null>(null);
 
   const fullPhone = `${PK_COUNTRY_CODE}${phoneDigits}`;
-  const identifierLabel = method === "phone" ? fullPhone : email;
 
   function switchMethod(next: AuthMethod) {
     setMethod(next);
@@ -58,7 +59,7 @@ export default function LoginPage() {
         recaptchaVerifierRef.current
       );
     } catch (err) {
-      setError(errorMessage(err, "Failed to send code. Try again."));
+      setError(errorMessage(err, t("login.errorSendFailed")));
       return false;
     }
     return true;
@@ -82,11 +83,11 @@ export default function LoginPage() {
     setError(null);
 
     if (method === "phone" && !PHONE_DIGITS_REGEX.test(phoneDigits)) {
-      setError("Enter a valid 10-digit mobile number, e.g. 3001234567.");
+      setError(t("login.errorInvalidPhone"));
       return;
     }
     if (method === "email" && !EMAIL_REGEX.test(email)) {
-      setError("Enter a valid email address.");
+      setError(t("login.errorInvalidEmail"));
       return;
     }
 
@@ -99,7 +100,7 @@ export default function LoginPage() {
 
   async function verifyPhoneOtp() {
     if (!confirmationResultRef.current) {
-      setError("Session expired. Request a new code.");
+      setError(t("login.errorSessionExpired"));
       return;
     }
 
@@ -123,7 +124,7 @@ export default function LoginPage() {
         .signOut()
         .catch(() => {});
     } catch (err) {
-      setError(errorMessage(err, "Verification failed. Try again."));
+      setError(errorMessage(err, t("login.errorVerifyFailed")));
       return;
     }
 
@@ -141,7 +142,7 @@ export default function LoginPage() {
     });
 
     if (verifyError || !data.user) {
-      setError(verifyError?.message ?? "Verification failed. Try again.");
+      setError(verifyError?.message ?? t("login.errorVerifyFailed"));
       return;
     }
 
@@ -155,7 +156,7 @@ export default function LoginPage() {
     setError(null);
 
     if (!/^\d{6}$/.test(otp)) {
-      setError("Enter the 6-digit code you received.");
+      setError(t("login.errorInvalidOtp"));
       return;
     }
 
@@ -179,16 +180,14 @@ export default function LoginPage() {
         <div>
           <h1 className="text-senior-2xl font-bold text-ink">Udhar Plus</h1>
           <p className="mt-1 text-senior-base text-ink-secondary">
-            {step === "identifier"
-              ? "Sign in with your phone number or email."
-              : `Enter the code sent to ${identifierLabel}.`}
+            {step === "identifier" ? t("login.signInPrompt") : t("login.enterVerificationCode")}
           </p>
         </div>
       </div>
 
       <div className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-6 shadow-card">
         {step === "identifier" && (
-          <div role="tablist" aria-label="Login method" className="flex gap-1 rounded-xl bg-surface-alt p-1">
+          <div role="tablist" aria-label={t("login.loginMethodLabel")} className="flex gap-1 rounded-xl bg-surface-alt p-1">
             <button
               type="button"
               role="tab"
@@ -198,7 +197,7 @@ export default function LoginPage() {
                 method === "phone" ? "bg-surface text-primary shadow-card" : "text-ink-secondary"
               }`}
             >
-              Phone Number
+              {t("login.phoneTab")}
             </button>
             <button
               type="button"
@@ -209,7 +208,7 @@ export default function LoginPage() {
                 method === "email" ? "bg-surface text-primary shadow-card" : "text-ink-secondary"
               }`}
             >
-              Email Address
+              {t("login.emailTab")}
             </button>
           </div>
         )}
@@ -219,9 +218,9 @@ export default function LoginPage() {
             {method === "phone" ? (
               <div className="flex flex-col gap-2">
                 <label htmlFor="phone" className="text-senior-base font-medium text-ink">
-                  Mobile number
+                  {t("login.mobileNumber")}
                 </label>
-                <div className="flex items-stretch gap-2">
+                <div dir="ltr" className="flex items-stretch gap-2">
                   <span className="flex min-h-tap shrink-0 items-center rounded-xl border border-border bg-surface-alt px-4 text-senior-base font-medium text-ink">
                     {PK_COUNTRY_CODE}
                   </span>
@@ -239,7 +238,7 @@ export default function LoginPage() {
             ) : (
               <TextField
                 id="email"
-                label="Email address"
+                label={t("login.emailAddress")}
                 type="email"
                 autoComplete="email"
                 value={email}
@@ -254,17 +253,18 @@ export default function LoginPage() {
             )}
 
             <Button type="submit" loading={loading} fullWidth>
-              {method === "phone" && loading ? "Verifying…" : "Send code"}
+              {method === "phone" && loading ? t("login.verifying") : t("login.sendCode")}
             </Button>
           </form>
         ) : (
           <form onSubmit={handleVerifyOtp} noValidate className="flex flex-col gap-4">
             <label htmlFor="otp" className="text-senior-base font-medium text-ink">
-              Verification code
+              {t("login.verificationCode")}
             </label>
             <input
               id="otp"
               type="text"
+              dir="ltr"
               inputMode="numeric"
               autoComplete="one-time-code"
               value={otp}
@@ -279,7 +279,7 @@ export default function LoginPage() {
             )}
 
             <Button type="submit" loading={loading} fullWidth>
-              Verify & sign in
+              {t("login.verifyAndSignIn")}
             </Button>
 
             <Button
@@ -291,7 +291,7 @@ export default function LoginPage() {
                 setError(null);
               }}
             >
-              {method === "phone" ? "Change number" : "Change email"}
+              {method === "phone" ? t("login.changeNumber") : t("login.changeEmail")}
             </Button>
           </form>
         )}

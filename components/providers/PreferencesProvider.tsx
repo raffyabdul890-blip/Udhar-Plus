@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import {
   getLocalLanguage,
   getLocalTheme,
@@ -40,12 +40,31 @@ function applyToDocument(resolvedTheme: "light" | "dark", language: Language) {
 }
 
 export default function PreferencesProvider({ children }: { children: React.ReactNode }) {
-  // Lazy initializers read the same localStorage the blocking inline script
-  // (app/layout.tsx) already used to set data-theme/dir before this component
-  // ever mounts — matching state here, not re-deriving it, is what avoids a
-  // hydration mismatch.
+  // Theme's lazy initializer reads the same localStorage the blocking inline
+  // script (app/layout.tsx) already used to set data-theme before this
+  // component ever mounts. That's hydration-safe because resolvedTheme never
+  // appears in rendered JSX — it only drives an imperative DOM mutation
+  // (applyToDocument, below), which React's hydration diff never inspects.
+  //
+  // Language is different: it flows into every t() call, i.e. straight into
+  // rendered text. A lazy initializer reading localStorage here would make
+  // the client's first render diverge from the server's (which always sees
+  // "en", since localStorage doesn't exist during SSR) — a real hydration
+  // mismatch for any returning Urdu user, not just a cosmetic warning. So
+  // this always starts at the SSR-matching default and self-corrects in a
+  // layout effect (before paint, so there's no visible flash) rather than in
+  // the initializer.
   const [theme, setThemeState] = useState<ThemePreference>(() => getLocalTheme());
-  const [language, setLanguageState] = useState<Language>(() => getLocalLanguage());
+  const [language, setLanguageState] = useState<Language>("en");
+
+  useLayoutEffect(() => {
+    // Synchronizing with localStorage (an external store unavailable during
+    // SSR) before paint, not deriving state from props — the textbook valid
+    // effect use case, just one the lint rule can't tell apart.
+    const stored = getLocalLanguage();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (stored !== "en") setLanguageState(stored);
+  }, []);
 
   const resolvedTheme = useMemo(() => resolveTheme(theme), [theme]);
 

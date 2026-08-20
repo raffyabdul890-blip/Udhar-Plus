@@ -1,7 +1,10 @@
+"use client";
+
 import Icon from "@/components/icons/Icon";
 import Button from "@/components/ui/Button";
 import { selectClassName } from "@/components/ui/TextField";
 import type { LineItem, LocalItem } from "@/lib/db/offlineStorage";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 export function emptyLineItem(): LineItem {
   return { id: crypto.randomUUID(), name: "", quantity: 0, unit: "", pricePerUnit: 0 };
@@ -24,6 +27,8 @@ export default function ItemizedEntryFields({
   catalogItems: LocalItem[];
   onChange: (items: LineItem[]) => void;
 }) {
+  const { t } = usePreferences();
+
   function updateItem(id: string, patch: Partial<LineItem>) {
     onChange(items.map((item) => (item.id === id ? { ...item, ...patch } : item)));
   }
@@ -62,10 +67,10 @@ export default function ItemizedEntryFields({
                 <select
                   value={item.itemId ?? ""}
                   onChange={(e) => handleCatalogSelect(item.id, e.target.value)}
-                  aria-label="Choose item from catalog"
+                  aria-label={t("customer.chooseFromCatalogAria")}
                   className={`${selectClassName} min-w-0 flex-1 text-senior-sm`}
                 >
-                  <option value="">— Type item manually —</option>
+                  <option value="">{t("customer.typeItemManually")}</option>
                   {catalogItems.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -77,15 +82,15 @@ export default function ItemizedEntryFields({
                 <input
                   value={item.name}
                   onChange={(e) => updateItem(item.id, { name: e.target.value })}
-                  placeholder="Item name, e.g. Rice"
-                  aria-label="Item name"
+                  placeholder={t("customer.itemNamePlaceholder")}
+                  aria-label={t("customer.itemNameAria")}
                   className={fieldClassName}
                 />
               )}
               <button
                 type="button"
                 onClick={() => removeItem(item.id)}
-                aria-label="Remove item"
+                aria-label={t("customer.removeItemAria")}
                 className="flex min-h-tap min-w-tap shrink-0 items-center justify-center rounded-lg text-ink-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 <Icon name="trash" size={18} />
@@ -96,8 +101,8 @@ export default function ItemizedEntryFields({
               <input
                 value={item.name}
                 onChange={(e) => updateItem(item.id, { name: e.target.value })}
-                placeholder="Item name, e.g. Rice"
-                aria-label="Item name"
+                placeholder={t("customer.itemNamePlaceholder")}
+                aria-label={t("customer.itemNameAria")}
                 className={`${fieldClassName} flex-none`}
               />
             )}
@@ -110,15 +115,15 @@ export default function ItemizedEntryFields({
                 inputMode="decimal"
                 min="0"
                 step="0.01"
-                placeholder="Qty"
-                aria-label="Quantity"
+                placeholder={t("customer.quantityPlaceholder")}
+                aria-label={t("customer.quantityAria")}
                 className={`${fieldClassName} w-0 px-2`}
               />
               <input
                 value={item.unit ?? ""}
                 onChange={(e) => updateItem(item.id, { unit: e.target.value })}
-                placeholder="Unit, e.g. kg"
-                aria-label="Unit"
+                placeholder={t("customer.unitPlaceholder")}
+                aria-label={t("customer.unitAria")}
                 className={`${fieldClassName} w-0 px-2`}
               />
               <input
@@ -128,20 +133,20 @@ export default function ItemizedEntryFields({
                 inputMode="decimal"
                 min="0"
                 step="0.01"
-                placeholder="Price/unit"
-                aria-label="Price per unit"
+                placeholder={t("customer.pricePerUnitPlaceholder")}
+                aria-label={t("customer.pricePerUnitAria")}
                 className={`${fieldClassName} w-0 px-2`}
               />
             </div>
 
             {lineTotal > 0 && (
               <p className="text-senior-xs font-medium text-ink-secondary">
-                Line total: {lineTotal.toLocaleString("en-PK")}
+                {t("customer.lineTotal", { amount: lineTotal.toLocaleString("en-PK") })}
               </p>
             )}
             {overStock && catalogItem && (
               <p className="text-senior-xs font-medium text-danger">
-                Only {catalogItem.stock_quantity} in stock — saving will take stock negative.
+                {t("customer.overStockWarning", { stock: catalogItem.stock_quantity })}
               </p>
             )}
           </div>
@@ -149,7 +154,7 @@ export default function ItemizedEntryFields({
       })}
 
       <Button variant="secondary" size="sm" icon="plus" onClick={() => onChange([...items, emptyLineItem()])}>
-        Add Item
+        {t("items.addItem")}
       </Button>
     </div>
   );

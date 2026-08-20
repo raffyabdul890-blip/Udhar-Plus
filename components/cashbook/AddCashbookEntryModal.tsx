@@ -7,7 +7,7 @@ import SegmentedControl from "@/components/ui/SegmentedControl";
 import Button from "@/components/ui/Button";
 import { useToast } from "@/components/ui/ToastProvider";
 import PhotoAttachment from "@/components/customers/PhotoAttachment";
-import { selectClassName } from "@/components/ui/TextField";
+import AccountSelectField from "@/components/bank/AccountSelectField";
 import {
   CASH_IN_CATEGORIES,
   CASH_OUT_CATEGORIES,
@@ -17,6 +17,7 @@ import { getFinancialInstitution } from "@/lib/constants/banks";
 import { recordCashbookEntry, updateCashbookEntryWithLink } from "@/lib/db/ledger";
 import { getBankAccounts, savePhoto, type CashbookEntry, type LocalBankAccount } from "@/lib/db/offlineStorage";
 import { fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/utils/datetime";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 type PhotoState = { kind: "none" } | { kind: "new"; file: File } | { kind: "existing"; id: string };
 
@@ -39,6 +40,7 @@ export default function AddCashbookEntryModal({
   onSaved: () => void;
   onDelete?: () => void;
 }) {
+  const { t } = usePreferences();
   const showToast = useToast();
   const isExpense = existing ? Boolean(existing.is_expense) : mode === "expense";
   const [type, setType] = useState<"IN" | "OUT">(existing?.type ?? (isExpense ? "OUT" : initialType));
@@ -64,7 +66,13 @@ export default function AddCashbookEntryModal({
   }, [userId]);
 
   const categoryOptions = isExpense ? EXPENSE_CATEGORIES : type === "IN" ? CASH_IN_CATEGORIES : CASH_OUT_CATEGORIES;
-  const title = existing ? (isExpense ? "Edit Expense" : "Edit Cash Entry") : isExpense ? "Add Expense" : "Add Cash Entry";
+  const title = existing
+    ? isExpense
+      ? t("cashbook.editExpense")
+      : t("cashbook.editCashEntry")
+    : isExpense
+      ? t("cashbook.addExpense")
+      : t("cashbook.addCashEntry");
   const accountOptions = bankAccounts.filter(
     (a) => getFinancialInstitution(a.bank_code)?.category === paymentMethod
   );
@@ -76,18 +84,18 @@ export default function AddCashbookEntryModal({
 
     const parsedAmount = Number(amount);
     if (!parsedAmount || parsedAmount <= 0) {
-      setError("Enter an amount greater than zero.");
+      setError(t("transaction.errorAmount"));
       return;
     }
     if (!category.trim()) {
-      setError("Choose or enter a category.");
+      setError(t("cashbook.errorCategory"));
       return;
     }
 
     const selectedAccount =
       isExpense && paymentMethod !== "cash" ? bankAccounts.find((a) => a.id === accountId) : undefined;
     if (isExpense && paymentMethod !== "cash" && !selectedAccount) {
-      setError(`Choose which ${paymentMethod} account this was paid from.`);
+      setError(t("cashbook.chooseAccountPaidFrom", { method: paymentMethod }));
       return;
     }
 
@@ -119,7 +127,7 @@ export default function AddCashbookEntryModal({
     }
 
     setSaving(false);
-    showToast(isExpense ? "Expense added" : type === "IN" ? "Cash in recorded" : "Cash out recorded");
+    showToast(isExpense ? t("toast.expenseAdded") : type === "IN" ? t("toast.cashInRecorded") : t("toast.cashOutRecorded"));
     onSaved();
     onClose();
   }
@@ -129,19 +137,19 @@ export default function AddCashbookEntryModal({
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {!isExpense && (
           <SegmentedControl
-            label="Type"
+            label={t("cashbook.type")}
             value={type}
             onChange={setType}
             options={[
-              { value: "IN", label: "Cash IN" },
-              { value: "OUT", label: "Cash OUT" },
+              { value: "IN", label: t("cashbook.cashIn") },
+              { value: "OUT", label: t("cashbook.cashOut") },
             ]}
           />
         )}
 
         <TextField
           id="cashbook-amount"
-          label="Amount"
+          label={t("transaction.amount")}
           type="number"
           inputMode="decimal"
           min="0"
@@ -154,11 +162,11 @@ export default function AddCashbookEntryModal({
 
         <TextField
           id="cashbook-category"
-          label="Category"
+          label={t("cashbook.category")}
           list="cashbook-category-options"
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          placeholder={isExpense ? "e.g. Rent" : "e.g. Sale, Rent, Salary"}
+          placeholder={isExpense ? t("cashbook.categoryPlaceholderExpense") : t("cashbook.categoryPlaceholderCash")}
         />
         <datalist id="cashbook-category-options">
           {categoryOptions.map((c) => (
@@ -169,36 +177,29 @@ export default function AddCashbookEntryModal({
         {(isExpense || type === "OUT") && (
           <div className="flex flex-col gap-2">
             <SegmentedControl
-              label="Payment method"
+              label={t("transaction.paymentMethod")}
               value={paymentMethod}
               onChange={(value) => {
                 setPaymentMethod(value);
                 setAccountId("");
               }}
               options={[
-                { value: "cash", label: "Cash" },
-                { value: "bank", label: "Bank" },
-                { value: "wallet", label: "Wallet" },
+                { value: "cash", label: t("transaction.cash") },
+                { value: "bank", label: t("transaction.bank") },
+                { value: "wallet", label: t("transaction.wallet") },
               ]}
             />
             {isExpense && paymentMethod !== "cash" && (
               accountOptions.length > 0 ? (
-                <select
-                  aria-label={`Choose ${paymentMethod} account`}
+                <AccountSelectField
+                  label={t("cashbook.chooseAccountAria", { method: paymentMethod })}
+                  accounts={accountOptions}
                   value={accountId}
-                  onChange={(e) => setAccountId(e.target.value)}
-                  className={selectClassName}
-                >
-                  <option value="">— Choose account —</option>
-                  {accountOptions.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.account_title} ({a.bank_name})
-                    </option>
-                  ))}
-                </select>
+                  onChange={setAccountId}
+                />
               ) : (
                 <p className="text-senior-xs text-ink-secondary">
-                  No {paymentMethod} account yet — add one in Bank &amp; Wallet first.
+                  {t("transaction.noAccountYet", { method: paymentMethod })}
                 </p>
               )
             )}
@@ -207,7 +208,7 @@ export default function AddCashbookEntryModal({
 
         <TextField
           id="cashbook-date"
-          label="Date & time"
+          label={t("transaction.dateTime")}
           type="datetime-local"
           value={dateValue}
           onChange={(e) => setDateValue(e.target.value)}
@@ -215,10 +216,10 @@ export default function AddCashbookEntryModal({
 
         <TextField
           id="cashbook-note"
-          label="Note (optional)"
+          label={t("common.noteOptional")}
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="e.g. Monthly shop rent"
+          placeholder={t("cashbook.notePlaceholder")}
         />
 
         <PhotoAttachment
@@ -235,12 +236,12 @@ export default function AddCashbookEntryModal({
         )}
 
         <Button type="submit" variant={ctaVariant} loading={saving} fullWidth className="sticky bottom-0 bg-surface">
-          {existing ? "Update entry" : "Save entry"}
+          {existing ? t("transaction.updateEntry") : t("cashbook.saveEntry")}
         </Button>
 
         {onDelete && (
           <Button variant="danger" fullWidth onClick={onDelete}>
-            Delete entry
+            {t("cashbook.deleteEntryButton")}
           </Button>
         )}
       </form>

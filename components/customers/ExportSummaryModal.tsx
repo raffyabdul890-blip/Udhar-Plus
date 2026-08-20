@@ -8,6 +8,7 @@ import { buildLedgerRows, formatLedgerDate } from "@/lib/ledgerRows";
 import { downloadCanvasAsPng, renderBillCanvas } from "@/lib/canvasBill";
 import { buildLedgerSummaryMessage } from "@/lib/whatsapp";
 import type { LocalCustomer, LocalTransaction } from "@/lib/db/offlineStorage";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 export default function ExportSummaryModal({
   customer,
@@ -22,6 +23,7 @@ export default function ExportSummaryModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = usePreferences();
   const [showWhatsApp, setShowWhatsApp] = useState(false);
   const rows = buildLedgerRows(transactions);
   const canShareWhatsApp = Boolean(customer.phone);
@@ -54,7 +56,7 @@ export default function ExportSummaryModal({
     return (
       <WhatsAppReminderModal
         customer={customer}
-        title={`Share Statement with ${customer.name}`}
+        title={t("customer.shareStatementWith", { name: customer.name })}
         presetMessage={buildSummaryMessage()}
         onClose={onClose}
         onSaved={onSaved}
@@ -63,19 +65,17 @@ export default function ExportSummaryModal({
   }
 
   return (
-    <Modal title={`Share / Export — ${customer.name}`} onClose={onClose}>
+    <Modal title={t("customer.shareExportTitle", { name: customer.name })} onClose={onClose}>
       <div className="flex flex-col gap-3">
         <Button icon="whatsapp" fullWidth onClick={() => setShowWhatsApp(true)} disabled={!canShareWhatsApp}>
-          Share via WhatsApp
+          {t("transaction.shareViaWhatsApp")}
         </Button>
         {!canShareWhatsApp && (
-          <p className="text-senior-xs text-ink-secondary">
-            Add a phone number via &ldquo;Remind&rdquo; first to enable WhatsApp sharing.
-          </p>
+          <p className="text-senior-xs text-ink-secondary">{t("customer.addPhoneToShare")}</p>
         )}
 
         <Button variant="secondary" icon="download" fullWidth onClick={handleDownloadBill}>
-          Download Bill
+          {t("transaction.downloadBill")}
         </Button>
       </div>
     </Modal>

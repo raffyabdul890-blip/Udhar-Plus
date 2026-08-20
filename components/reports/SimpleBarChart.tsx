@@ -1,3 +1,7 @@
+"use client";
+
+import { usePreferences } from "@/components/providers/PreferencesProvider";
+
 /**
  * Dependency-free horizontal bar chart — plain divs sized by percentage, no
  * canvas/SVG/charting library. Deliberately simple: this app's numbers matter
@@ -8,10 +12,11 @@ export default function SimpleBarChart({
 }: {
   bars: { label: string; value: number; colorClassName?: string }[];
 }) {
+  const { t } = usePreferences();
   const max = Math.max(1, ...bars.map((b) => Math.abs(b.value)));
 
   if (bars.every((b) => b.value === 0)) {
-    return <p className="text-senior-sm text-ink-secondary">Not enough data yet.</p>;
+    return <p className="text-senior-sm text-ink-secondary">{t("common.notEnoughData")}</p>;
   }
 
   return (

@@ -31,6 +31,7 @@ export const PAKISTANI_BANKS: FinancialInstitution[] = [
   { code: "dib", name: "Dubai Islamic Bank Pakistan", shortLabel: "DIB", category: "bank", color: "#00563F" },
   { code: "fwb", name: "First Women Bank", shortLabel: "FWB", category: "bank", color: "#B0175E" },
   { code: "bankislami", name: "BankIslami", shortLabel: "BIP", category: "bank", color: "#00A99D" },
+  { code: "samba", name: "Samba Bank", shortLabel: "SMB", category: "bank", color: "#5A2A82" },
   { code: "other-bank", name: "Other Bank", shortLabel: "?", category: "bank", color: "#6D4AFF" },
 ];
 

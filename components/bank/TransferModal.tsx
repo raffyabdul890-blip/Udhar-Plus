@@ -5,10 +5,11 @@ import Modal from "@/components/ui/Modal";
 import TextField from "@/components/ui/TextField";
 import Button from "@/components/ui/Button";
 import { useToast } from "@/components/ui/ToastProvider";
-import { selectClassName } from "@/components/ui/TextField";
+import AccountSelectField from "@/components/bank/AccountSelectField";
 import { recordTransfer } from "@/lib/db/ledger";
 import { fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/utils/datetime";
 import type { LocalBankAccount } from "@/lib/db/offlineStorage";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 /**
  * Records a manual transfer between two of the shopkeeper's own in-app
@@ -25,6 +26,7 @@ export default function TransferModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = usePreferences();
   const showToast = useToast();
   const destinations = accounts.filter((a) => a.id !== fromAccount.id);
   const [toAccountId, setToAccountId] = useState(destinations[0]?.id ?? "");
@@ -40,12 +42,12 @@ export default function TransferModal({
 
     const parsedAmount = Number(amount);
     if (!parsedAmount || parsedAmount <= 0) {
-      setError("Enter an amount greater than zero.");
+      setError(t("transaction.errorAmount"));
       return;
     }
     const toAccount = destinations.find((a) => a.id === toAccountId);
     if (!toAccount) {
-      setError("Choose which account receives the transfer.");
+      setError(t("bank.errorChooseDestination"));
       return;
     }
 
@@ -58,35 +60,24 @@ export default function TransferModal({
       fromDatetimeLocalValue(dateValue)
     );
     setSaving(false);
-    showToast("Transfer complete");
+    showToast(t("toast.transferComplete"));
     onSaved();
     onClose();
   }
 
   return (
-    <Modal title={`Transfer from ${fromAccount.account_title}`} onClose={onClose}>
+    <Modal title={t("bank.transferFrom", { account: fromAccount.account_title })} onClose={onClose}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <label htmlFor="transfer-to" className="text-senior-base font-medium text-ink">
-            To account
-          </label>
-          <select
-            id="transfer-to"
-            value={toAccountId}
-            onChange={(e) => setToAccountId(e.target.value)}
-            className={selectClassName}
-          >
-            {destinations.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.account_title} ({a.bank_name})
-              </option>
-            ))}
-          </select>
-        </div>
+        <AccountSelectField
+          label={t("bank.toAccount")}
+          accounts={destinations}
+          value={toAccountId}
+          onChange={setToAccountId}
+        />
 
         <TextField
           id="transfer-amount"
-          label="Amount"
+          label={t("transaction.amount")}
           type="number"
           inputMode="decimal"
           min="0"
@@ -99,7 +90,7 @@ export default function TransferModal({
 
         <TextField
           id="transfer-date"
-          label="Date & time"
+          label={t("transaction.dateTime")}
           type="datetime-local"
           value={dateValue}
           onChange={(e) => setDateValue(e.target.value)}
@@ -107,10 +98,10 @@ export default function TransferModal({
 
         <TextField
           id="transfer-note"
-          label="Note (optional)"
+          label={t("common.noteOptional")}
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="e.g. Moving float to JazzCash"
+          placeholder={t("bank.transferNotePlaceholder")}
         />
 
         {error && (
@@ -120,7 +111,7 @@ export default function TransferModal({
         )}
 
         <Button type="submit" icon="transfer" loading={saving} fullWidth className="sticky bottom-0 bg-surface">
-          Transfer
+          {t("bank.transfer")}
         </Button>
       </form>
     </Modal>

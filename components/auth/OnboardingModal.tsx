@@ -5,6 +5,7 @@ import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
 import { markOnboardingCompleteLocally } from "@/lib/onboarding";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 export default function OnboardingModal({
   userId,
@@ -13,6 +14,7 @@ export default function OnboardingModal({
   userId: string;
   onComplete: () => void;
 }) {
+  const { t } = usePreferences();
   const [agreed, setAgreed] = useState(false);
 
   function handleGetStarted() {
@@ -27,11 +29,9 @@ export default function OnboardingModal({
   }
 
   return (
-    <Modal title="Welcome to Udhar Plus" onClose={() => {}} dismissable={false}>
+    <Modal title={t("onboarding.welcomeTitle")} onClose={() => {}} dismissable={false}>
       <div className="flex flex-col gap-4">
-        <p className="text-senior-base text-ink-secondary">
-          Please review and accept our Terms and Conditions to get started.
-        </p>
+        <p className="text-senior-base text-ink-secondary">{t("onboarding.reviewTerms")}</p>
 
         <label className="flex min-h-tap cursor-pointer items-center gap-3 text-senior-sm text-ink-secondary">
           <input
@@ -40,11 +40,11 @@ export default function OnboardingModal({
             onChange={(e) => setAgreed(e.target.checked)}
             className="h-5 w-5 shrink-0 rounded border-border accent-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           />
-          <span>I agree to the Terms and Conditions</span>
+          <span>{t("onboarding.agreeToTerms")}</span>
         </label>
 
         <Button onClick={handleGetStarted} disabled={!agreed} fullWidth>
-          Get Started
+          {t("onboarding.getStarted")}
         </Button>
       </div>
     </Modal>

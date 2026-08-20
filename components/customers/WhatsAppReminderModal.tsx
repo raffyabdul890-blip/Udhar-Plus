@@ -11,6 +11,7 @@ import {
   formatWhatsAppNumber,
   isValidWhatsAppNumber,
 } from "@/lib/whatsapp";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 export default function WhatsAppReminderModal({
   customer,
@@ -27,6 +28,7 @@ export default function WhatsAppReminderModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = usePreferences();
   const [phone, setPhone] = useState(customer.phone ?? "");
   const [message, setMessage] = useState(
     presetMessage ?? buildReminderMessage(customer.name, customer.current_balance)
@@ -39,7 +41,7 @@ export default function WhatsAppReminderModal({
 
     const formatted = formatWhatsAppNumber(phone);
     if (!isValidWhatsAppNumber(formatted)) {
-      setError("Enter a valid WhatsApp number, e.g. 03001234567.");
+      setError(t("customer.errorWhatsAppNumber"));
       return;
     }
 
@@ -54,11 +56,11 @@ export default function WhatsAppReminderModal({
   }
 
   return (
-    <Modal title={title ?? `Send WhatsApp Reminder to ${customer.name}`} onClose={onClose}>
+    <Modal title={title ?? t("customer.sendWhatsAppReminderTo", { name: customer.name })} onClose={onClose}>
       <form onSubmit={handleOpenWhatsApp} className="flex flex-col gap-4">
         <TextField
           id="whatsapp-phone"
-          label="WhatsApp / phone number"
+          label={t("customer.whatsappPhoneLabel")}
           type="tel"
           inputMode="numeric"
           value={phone}
@@ -69,7 +71,7 @@ export default function WhatsAppReminderModal({
 
         <div className="flex flex-col gap-2">
           <label htmlFor="whatsapp-message" className="text-senior-base font-medium text-ink">
-            Message (editable)
+            {t("customer.messageEditable")}
           </label>
           <textarea
             id="whatsapp-message"
@@ -87,7 +89,7 @@ export default function WhatsAppReminderModal({
         )}
 
         <Button type="submit" icon="whatsapp" fullWidth className="sticky bottom-0 bg-surface">
-          Open WhatsApp
+          {t("customer.openWhatsApp")}
         </Button>
       </form>
     </Modal>

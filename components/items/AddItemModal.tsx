@@ -6,6 +6,7 @@ import TextField from "@/components/ui/TextField";
 import Button from "@/components/ui/Button";
 import { useToast } from "@/components/ui/ToastProvider";
 import { addItem, updateItem, type LocalItem } from "@/lib/db/offlineStorage";
+import { usePreferences } from "@/components/providers/PreferencesProvider";
 
 export default function AddItemModal({
   userId,
@@ -20,6 +21,7 @@ export default function AddItemModal({
   onSaved: () => void;
   onDelete?: () => void;
 }) {
+  const { t } = usePreferences();
   const showToast = useToast();
   const [name, setName] = useState(existing?.name ?? "");
   const [stock, setStock] = useState(existing ? String(existing.stock_quantity) : "0");
@@ -40,7 +42,7 @@ export default function AddItemModal({
     setError(null);
 
     if (!name.trim()) {
-      setError("Enter the item's name.");
+      setError(t("items.errorName"));
       return;
     }
 
@@ -60,25 +62,25 @@ export default function AddItemModal({
     }
 
     setSaving(false);
-    showToast(existing ? "Item updated" : "Item added");
+    showToast(existing ? t("toast.itemUpdated") : t("toast.itemAdded"));
     onSaved();
     onClose();
   }
 
   return (
-    <Modal title={existing ? "Edit Item" : "Add Item"} onClose={onClose}>
+    <Modal title={existing ? t("items.editItem") : t("items.addItem")} onClose={onClose}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <TextField
           id="item-name"
-          label="Item name"
+          label={t("items.itemName")}
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. Rice (basmati)"
+          placeholder={t("items.namePlaceholder")}
           autoFocus
         />
         <TextField
           id="item-stock"
-          label="Stock quantity"
+          label={t("items.stockQuantity")}
           type="number"
           inputMode="decimal"
           min="0"
@@ -89,7 +91,7 @@ export default function AddItemModal({
         />
         <TextField
           id="item-purchase-price"
-          label="Purchase price (optional)"
+          label={t("items.purchasePrice")}
           type="number"
           inputMode="decimal"
           min="0"
@@ -100,7 +102,7 @@ export default function AddItemModal({
         />
         <TextField
           id="item-selling-price"
-          label="Selling price (optional)"
+          label={t("items.sellingPrice")}
           type="number"
           inputMode="decimal"
           min="0"
@@ -111,7 +113,7 @@ export default function AddItemModal({
         />
         <TextField
           id="item-low-stock"
-          label="Low stock warning below (optional)"
+          label={t("items.lowStockWarning")}
           type="number"
           inputMode="decimal"
           min="0"
@@ -128,12 +130,12 @@ export default function AddItemModal({
         )}
 
         <Button type="submit" loading={saving} fullWidth className="sticky bottom-0 bg-surface">
-          Save Item
+          {t("items.saveItem")}
         </Button>
 
         {onDelete && (
           <Button variant="danger" fullWidth onClick={onDelete}>
-            Delete item
+            {t("items.deleteItemButton")}
           </Button>
         )}
       </form>
