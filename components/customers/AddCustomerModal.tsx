@@ -144,8 +144,16 @@ export default function AddCustomerModal({
   }
 
   return (
-    <Modal title={isEditing ? t("customer.edit") : t("customer.add")} onClose={onClose}>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <Modal
+      title={isEditing ? t("customer.edit") : t("customer.add")}
+      onClose={onClose}
+      footer={
+        <Button type="submit" form="add-customer-form" loading={saving} fullWidth>
+          {isEditing ? t("customer.saveChanges") : t("customer.saveCustomer")}
+        </Button>
+      }
+    >
+      <form id="add-customer-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
         {!isEditing &&
           (contactsPickerAvailable ? (
             <Button variant="secondary" icon="contact" onClick={handlePickContact}>
@@ -210,10 +218,6 @@ export default function AddCustomerModal({
             {error}
           </p>
         )}
-
-        <Button type="submit" loading={saving} fullWidth className="sticky bottom-0 bg-surface">
-          {isEditing ? t("customer.saveChanges") : t("customer.saveCustomer")}
-        </Button>
       </form>
     </Modal>
   );

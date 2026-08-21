@@ -56,8 +56,16 @@ export default function WhatsAppReminderModal({
   }
 
   return (
-    <Modal title={title ?? t("customer.sendWhatsAppReminderTo", { name: customer.name })} onClose={onClose}>
-      <form onSubmit={handleOpenWhatsApp} className="flex flex-col gap-4">
+    <Modal
+      title={title ?? t("customer.sendWhatsAppReminderTo", { name: customer.name })}
+      onClose={onClose}
+      footer={
+        <Button type="submit" form="whatsapp-reminder-form" icon="whatsapp" fullWidth>
+          {t("customer.openWhatsApp")}
+        </Button>
+      }
+    >
+      <form id="whatsapp-reminder-form" onSubmit={handleOpenWhatsApp} className="flex flex-col gap-4">
         <TextField
           id="whatsapp-phone"
           label={t("customer.whatsappPhoneLabel")}
@@ -87,10 +95,6 @@ export default function WhatsAppReminderModal({
             {error}
           </p>
         )}
-
-        <Button type="submit" icon="whatsapp" fullWidth className="sticky bottom-0 bg-surface">
-          {t("customer.openWhatsApp")}
-        </Button>
       </form>
     </Modal>
   );

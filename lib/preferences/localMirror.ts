@@ -13,7 +13,7 @@ const THEME_KEY = "udhar-plus-theme";
 const LANGUAGE_KEY = "udhar-plus-language";
 
 export type ThemePreference = "light" | "dark" | "system";
-export type LanguagePreference = "en" | "ur";
+export type LanguagePreference = "en" | "ur" | "ur-Latn";
 
 export function getLocalTheme(): ThemePreference {
   if (typeof window === "undefined") return "light";
@@ -28,7 +28,8 @@ export function setLocalTheme(theme: ThemePreference): void {
 
 export function getLocalLanguage(): LanguagePreference {
   if (typeof window === "undefined") return "en";
-  return window.localStorage.getItem(LANGUAGE_KEY) === "ur" ? "ur" : "en";
+  const value = window.localStorage.getItem(LANGUAGE_KEY);
+  return value === "ur" || value === "ur-Latn" ? value : "en";
 }
 
 export function setLocalLanguage(language: LanguagePreference): void {

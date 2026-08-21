@@ -179,8 +179,36 @@ export default function BankTransactionModal({
   }
 
   return (
-    <Modal title={account.account_title} onClose={onClose}>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <Modal
+      title={account.account_title}
+      onClose={onClose}
+      footer={
+        <div className="flex flex-col gap-3">
+          <Button
+            type="submit"
+            form="bank-txn-form"
+            variant={type === "IN" ? "success" : "warning"}
+            loading={saving}
+            fullWidth
+          >
+            {editingTransaction ? t("transaction.updateEntry") : t("bank.saveEntry")}
+          </Button>
+
+          {editingTransaction && (
+            <Button variant="ghost" fullWidth onClick={resetForm}>
+              {t("transaction.cancelEdit")}
+            </Button>
+          )}
+
+          {accounts.length > 1 && !editingTransaction && (
+            <Button variant="secondary" icon="transfer" fullWidth onClick={() => setShowTransfer(true)}>
+              {t("bank.transferToAnotherAccount")}
+            </Button>
+          )}
+        </div>
+      }
+    >
+      <form id="bank-txn-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="rounded-2xl border border-border bg-surface-alt p-5 text-center">
           <p className="text-senior-sm font-medium text-ink-secondary">{t("bank.currentBalance")}</p>
           <Amount
@@ -238,22 +266,6 @@ export default function BankTransactionModal({
           <p role="alert" className="rounded-xl border border-danger/30 bg-danger-light px-4 py-3 text-senior-sm font-medium text-danger-dark">
             {error}
           </p>
-        )}
-
-        <Button type="submit" variant={type === "IN" ? "success" : "warning"} loading={saving} fullWidth className="sticky bottom-0 bg-surface">
-          {editingTransaction ? t("transaction.updateEntry") : t("bank.saveEntry")}
-        </Button>
-
-        {editingTransaction && (
-          <Button variant="ghost" fullWidth onClick={resetForm}>
-            {t("transaction.cancelEdit")}
-          </Button>
-        )}
-
-        {accounts.length > 1 && !editingTransaction && (
-          <Button variant="secondary" icon="transfer" fullWidth onClick={() => setShowTransfer(true)}>
-            {t("bank.transferToAnotherAccount")}
-          </Button>
         )}
       </form>
 

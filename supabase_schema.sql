@@ -300,6 +300,14 @@ create table if not exists public.business_settings (
 alter table public.business_settings add column if not exists theme text not null default 'light'
   check (theme in ('light', 'dark', 'system'));
 
+-- Roman Urdu ("ur-Latn" — the BCP-47 subtag for Urdu written in Latin script)
+-- added as a third language option alongside English and Urdu. Postgres names
+-- an inline column check constraint "<table>_<column>_check" by default, so
+-- that's the constraint being replaced here.
+alter table public.business_settings drop constraint if exists business_settings_language_check;
+alter table public.business_settings add constraint business_settings_language_check
+  check (language in ('en', 'ur', 'ur-Latn'));
+
 drop trigger if exists business_settings_set_updated_at on public.business_settings;
 create trigger business_settings_set_updated_at
   before update on public.business_settings

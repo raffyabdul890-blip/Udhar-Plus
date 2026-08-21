@@ -68,8 +68,23 @@ export default function AddItemModal({
   }
 
   return (
-    <Modal title={existing ? t("items.editItem") : t("items.addItem")} onClose={onClose}>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <Modal
+      title={existing ? t("items.editItem") : t("items.addItem")}
+      onClose={onClose}
+      footer={
+        <div className="flex flex-col gap-3">
+          <Button type="submit" form="add-item-form" loading={saving} fullWidth>
+            {t("items.saveItem")}
+          </Button>
+          {onDelete && (
+            <Button variant="danger" fullWidth onClick={onDelete}>
+              {t("items.deleteItemButton")}
+            </Button>
+          )}
+        </div>
+      }
+    >
+      <form id="add-item-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
         <TextField
           id="item-name"
           label={t("items.itemName")}
@@ -127,16 +142,6 @@ export default function AddItemModal({
           <p role="alert" className="rounded-xl border border-danger/30 bg-danger-light px-4 py-3 text-senior-sm font-medium text-danger-dark">
             {error}
           </p>
-        )}
-
-        <Button type="submit" loading={saving} fullWidth className="sticky bottom-0 bg-surface">
-          {t("items.saveItem")}
-        </Button>
-
-        {onDelete && (
-          <Button variant="danger" fullWidth onClick={onDelete}>
-            {t("items.deleteItemButton")}
-          </Button>
         )}
       </form>
     </Modal>

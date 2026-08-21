@@ -1,9 +1,11 @@
 import en from "./translations/en";
 import ur from "./translations/ur";
+import roman from "./translations/roman";
 
-export type Language = "en" | "ur";
+/** "ur-Latn" = Urdu written in Latin/Roman script — the BCP-47 subtag for it, not just an arbitrary label. Always LTR, unlike "ur". */
+export type Language = "en" | "ur" | "ur-Latn";
 
-const DICTIONARIES: Record<Language, Record<string, unknown>> = { en, ur };
+const DICTIONARIES: Record<Language, Record<string, unknown>> = { en, ur, "ur-Latn": roman };
 
 function lookup(dict: Record<string, unknown>, path: string): string | undefined {
   let node: unknown = dict;

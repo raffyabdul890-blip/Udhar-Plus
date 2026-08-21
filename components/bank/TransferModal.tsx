@@ -66,8 +66,16 @@ export default function TransferModal({
   }
 
   return (
-    <Modal title={t("bank.transferFrom", { account: fromAccount.account_title })} onClose={onClose}>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <Modal
+      title={t("bank.transferFrom", { account: fromAccount.account_title })}
+      onClose={onClose}
+      footer={
+        <Button type="submit" form="transfer-form" icon="transfer" loading={saving} fullWidth>
+          {t("bank.transfer")}
+        </Button>
+      }
+    >
+      <form id="transfer-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
         <AccountSelectField
           label={t("bank.toAccount")}
           accounts={destinations}
@@ -109,10 +117,6 @@ export default function TransferModal({
             {error}
           </p>
         )}
-
-        <Button type="submit" icon="transfer" loading={saving} fullWidth className="sticky bottom-0 bg-surface">
-          {t("bank.transfer")}
-        </Button>
       </form>
     </Modal>
   );

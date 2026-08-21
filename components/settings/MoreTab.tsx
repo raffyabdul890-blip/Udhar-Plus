@@ -21,7 +21,7 @@ import { syncPendingRecords } from "@/lib/sync/syncEngine";
 import { getLastSyncedAt } from "@/lib/sync/syncStatus";
 import { useOnlineStatus } from "@/lib/hooks/useOnlineStatus";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
-import type { ThemePreference } from "@/lib/preferences/localMirror";
+import type { LanguagePreference, ThemePreference } from "@/lib/preferences/localMirror";
 import { TERMS_PARAGRAPHS, PRIVACY_PARAGRAPHS } from "@/lib/legalContent";
 
 function Row({
@@ -112,7 +112,7 @@ export default function MoreTab({
     setSettings(updated);
   }
 
-  async function handleLanguageChange(next: "en" | "ur") {
+  async function handleLanguageChange(next: LanguagePreference) {
     setLanguage(next);
     const updated = await saveBusinessSettings(userId, { language: next });
     setSettings(updated);

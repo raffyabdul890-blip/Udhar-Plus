@@ -480,7 +480,38 @@ export default function CustomerTransactionModal({
   const canGoBack = !isQuickAction && !editingTransaction;
 
   return (
-    <Modal title={customer.name} onClose={onClose} hideTitle>
+    <Modal
+      title={customer.name}
+      onClose={onClose}
+      hideTitle
+      footer={
+        stage === "form" ? (
+          <div className="flex flex-col gap-3">
+            <Button
+              type="submit"
+              form="customer-txn-form"
+              variant={entryType === "MILAY" ? "success" : entryType === "SETTLE" ? "primary" : "warning"}
+              loading={saving}
+              fullWidth
+            >
+              {editingTransaction
+                ? t("transaction.updateEntry")
+                : entryType === "DIYE"
+                  ? t("transaction.saveUdhaar")
+                  : entryType === "MILAY"
+                    ? t("transaction.savePayment")
+                    : t("transaction.confirmSettle")}
+            </Button>
+
+            {editingTransaction && (
+              <Button variant="ghost" fullWidth onClick={resetForm}>
+                {t("transaction.cancelEdit")}
+              </Button>
+            )}
+          </div>
+        ) : undefined
+      }
+    >
       {stage === "choose" ? (
         <div className="flex animate-fade-in-up flex-col gap-5">
           <div className="flex items-center gap-3">
@@ -625,7 +656,7 @@ export default function CustomerTransactionModal({
           </Button>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="flex animate-fade-in-up flex-col gap-4">
+        <form id="customer-txn-form" onSubmit={handleSubmit} className="flex animate-fade-in-up flex-col gap-4">
           <div className={`-m-6 mb-0 flex flex-col gap-1 rounded-t-2xl px-6 pb-5 pt-6 ${bannerClasses}`}>
             {canGoBack && (
               <button
@@ -771,28 +802,6 @@ export default function CustomerTransactionModal({
             <p role="alert" className="rounded-xl border border-danger/30 bg-danger-light px-4 py-3 text-senior-sm font-medium text-danger-dark">
               {error}
             </p>
-          )}
-
-          <Button
-            type="submit"
-            variant={entryType === "MILAY" ? "success" : entryType === "SETTLE" ? "primary" : "warning"}
-            loading={saving}
-            fullWidth
-            className="sticky bottom-0 bg-surface"
-          >
-            {editingTransaction
-              ? t("transaction.updateEntry")
-              : entryType === "DIYE"
-                ? t("transaction.saveUdhaar")
-                : entryType === "MILAY"
-                  ? t("transaction.savePayment")
-                  : t("transaction.confirmSettle")}
-          </Button>
-
-          {editingTransaction && (
-            <Button variant="ghost" fullWidth onClick={resetForm}>
-              {t("transaction.cancelEdit")}
-            </Button>
           )}
         </form>
       )}

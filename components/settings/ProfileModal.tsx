@@ -77,8 +77,16 @@ export default function ProfileModal({
   }
 
   return (
-    <Modal title={t("profile.title")} onClose={onClose}>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+    <Modal
+      title={t("profile.title")}
+      onClose={onClose}
+      footer={
+        <Button type="submit" form="profile-form" loading={saving} fullWidth>
+          {t("common.saveChanges")}
+        </Button>
+      }
+    >
+      <form id="profile-form" onSubmit={handleSubmit} className="flex flex-col gap-6">
         <section className="flex flex-col gap-3">
           <h2 className="text-senior-xs font-bold uppercase tracking-wide text-ink-tertiary">
             {t("profile.ownerSection")}
@@ -102,7 +110,7 @@ export default function ProfileModal({
             label={t("profile.businessName")}
             value={businessName}
             onChange={(e) => setBusinessName(e.target.value)}
-            placeholder="e.g. Ahmed General Store"
+            placeholder={t("profile.businessNamePlaceholder")}
           />
           <div className="flex flex-col gap-2">
             <label htmlFor="profile-category" className="text-senior-base font-medium text-ink">
@@ -142,7 +150,7 @@ export default function ProfileModal({
             label={t("profile.shopAddress")}
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            placeholder="e.g. Main Bazaar, Lahore"
+            placeholder={t("profile.shopAddressPlaceholder")}
           />
           {(accountIdentity.phone || accountIdentity.email) && (
             <div className="rounded-xl border border-border bg-surface-alt px-4 py-3">
@@ -155,10 +163,6 @@ export default function ProfileModal({
             </div>
           )}
         </section>
-
-        <Button type="submit" loading={saving} fullWidth className="sticky bottom-0 bg-surface">
-          {t("common.saveChanges")}
-        </Button>
       </form>
     </Modal>
   );

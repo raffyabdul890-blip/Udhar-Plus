@@ -163,7 +163,7 @@ export interface LocalBusinessSettings {
   category?: string;
   /** References `photos.id`. */
   logo_photo_id?: string;
-  language: "en" | "ur";
+  language: "en" | "ur" | "ur-Latn";
   theme: "light" | "dark" | "system";
   created_at: string;
   updated_at: string;

@@ -7,6 +7,7 @@ import type { LanguagePreference } from "@/lib/preferences/localMirror";
 const OPTIONS: { value: LanguagePreference; label: string }[] = [
   { value: "en", label: "English" },
   { value: "ur", label: "اردو" },
+  { value: "ur-Latn", label: "Roman Urdu" },
 ];
 
 export default function LanguageSelector({ onChange }: { onChange: (language: LanguagePreference) => void }) {

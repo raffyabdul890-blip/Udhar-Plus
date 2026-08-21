@@ -39,7 +39,7 @@ export default function AddBankAccountModal({
     setError(null);
 
     if (!accountTitle.trim() || !accountNumber.trim()) {
-      setError("Enter both the account title and account number.");
+      setError(t("bank.errorAccountFields"));
       return;
     }
 
@@ -73,8 +73,16 @@ export default function AddBankAccountModal({
   }
 
   return (
-    <Modal title={t("bank.addAccount")} onClose={onClose}>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <Modal
+      title={t("bank.addAccount")}
+      onClose={onClose}
+      footer={
+        <Button type="submit" form="add-bank-account-form" loading={saving} fullWidth>
+          {t("bank.saveAccount")}
+        </Button>
+      }
+    >
+      <form id="add-bank-account-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
         <p className="rounded-xl border border-primary/20 bg-primary-light px-4 py-3 text-senior-xs text-primary">
           {t("bank.disclaimer")}
         </p>
@@ -83,22 +91,22 @@ export default function AddBankAccountModal({
 
         <TextField
           id="account-title"
-          label="Account title"
+          label={t("bank.accountTitle")}
           value={accountTitle}
           onChange={(e) => setAccountTitle(e.target.value)}
-          placeholder="e.g. Shop Account"
+          placeholder={t("bank.accountTitlePlaceholder")}
         />
         <TextField
           id="account-number"
-          label="Account number"
+          label={t("bank.accountNumber")}
           value={accountNumber}
           onChange={(e) => setAccountNumber(e.target.value)}
-          placeholder="e.g. 03001234567"
+          placeholder="03001234567"
           inputMode="numeric"
         />
         <TextField
           id="account-opening-balance"
-          label="Opening balance (optional)"
+          label={t("customer.openingBalance")}
           type="number"
           inputMode="decimal"
           min="0"
@@ -113,10 +121,6 @@ export default function AddBankAccountModal({
             {error}
           </p>
         )}
-
-        <Button type="submit" loading={saving} fullWidth className="sticky bottom-0 bg-surface">
-          Save Account
-        </Button>
       </form>
     </Modal>
   );

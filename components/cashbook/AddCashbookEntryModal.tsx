@@ -133,8 +133,23 @@ export default function AddCashbookEntryModal({
   }
 
   return (
-    <Modal title={title} onClose={onClose}>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <Modal
+      title={title}
+      onClose={onClose}
+      footer={
+        <div className="flex flex-col gap-3">
+          <Button type="submit" form="cashbook-entry-form" variant={ctaVariant} loading={saving} fullWidth>
+            {existing ? t("transaction.updateEntry") : t("cashbook.saveEntry")}
+          </Button>
+          {onDelete && (
+            <Button variant="danger" fullWidth onClick={onDelete}>
+              {t("cashbook.deleteEntryButton")}
+            </Button>
+          )}
+        </div>
+      }
+    >
+      <form id="cashbook-entry-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
         {!isExpense && (
           <SegmentedControl
             label={t("cashbook.type")}
@@ -233,16 +248,6 @@ export default function AddCashbookEntryModal({
           <p role="alert" className="rounded-xl border border-danger/30 bg-danger-light px-4 py-3 text-senior-sm font-medium text-danger-dark">
             {error}
           </p>
-        )}
-
-        <Button type="submit" variant={ctaVariant} loading={saving} fullWidth className="sticky bottom-0 bg-surface">
-          {existing ? t("transaction.updateEntry") : t("cashbook.saveEntry")}
-        </Button>
-
-        {onDelete && (
-          <Button variant="danger" fullWidth onClick={onDelete}>
-            {t("cashbook.deleteEntryButton")}
-          </Button>
         )}
       </form>
     </Modal>
