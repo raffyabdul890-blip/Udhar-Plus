@@ -190,21 +190,21 @@ export default function DashboardHome({
       <p className="text-senior-sm text-ink-secondary">{today} · {shopLabel}</p>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-2xl border border-border bg-surface p-4 shadow-card">
+        <div className="rounded-2xl border border-danger/10 bg-danger-light p-4 shadow-card">
           <p className="text-senior-xs font-medium text-ink-secondary">{t("dashboard.totalReceivable")}</p>
           <Amount value={totalReceivable} className="text-senior-xl font-bold text-danger" />
         </div>
-        <div className="rounded-2xl border border-border bg-surface p-4 shadow-card">
+        <div className="rounded-2xl border border-success/10 bg-success-light p-4 shadow-card">
           <p className="text-senior-xs font-medium text-ink-secondary">{t("dashboard.totalPayable")}</p>
           <Amount value={totalPayable} className="text-senior-xl font-bold text-success-dark" />
         </div>
-        <div className="rounded-2xl border border-border bg-surface p-4 shadow-card">
+        <div className="rounded-2xl border border-primary/10 bg-primary-light p-4 shadow-card">
           <p className="text-senior-xs font-medium text-ink-secondary">{t("dashboard.cashAvailable")}</p>
-          <Amount value={cashBalance} className="text-senior-xl font-bold text-ink" />
+          <Amount value={cashBalance} className="text-senior-xl font-bold text-primary" />
         </div>
-        <div className="rounded-2xl border border-border bg-surface p-4 shadow-card">
+        <div className="rounded-2xl border border-accent/10 bg-accent-light p-4 shadow-card">
           <p className="text-senior-xs font-medium text-ink-secondary">{t("dashboard.bankAndWallet")}</p>
-          <Amount value={bankWalletBalance} className="text-senior-xl font-bold text-ink" />
+          <Amount value={bankWalletBalance} className="text-senior-xl font-bold text-accent-dark" />
         </div>
       </div>
 

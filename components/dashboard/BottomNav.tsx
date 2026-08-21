@@ -21,6 +21,11 @@ export const NAV_ITEMS: { id: BottomTabId; icon: IconName }[] = [
 const MOBILE_TAB_IDS: BottomTabId[] = ["dashboard", "khata", "cashbook", "items", "more"];
 const MOBILE_TABS = MOBILE_TAB_IDS.map((id) => NAV_ITEMS.find((item) => item.id === id)!);
 
+/** Validates a value (e.g. the `?tab=` URL param) against the real tab list — single source of truth for both the nav UI and DashboardShell's refresh-persistence fallback. */
+export function isBottomTabId(value: string | undefined | null): value is BottomTabId {
+  return NAV_ITEMS.some((item) => item.id === value);
+}
+
 export default function BottomNav({
   active,
   onChange,

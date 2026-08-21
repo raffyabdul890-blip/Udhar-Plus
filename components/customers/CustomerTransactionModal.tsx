@@ -493,7 +493,15 @@ export default function CustomerTransactionModal({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-border bg-surface-alt p-5 text-center">
+          <div
+            className={`rounded-2xl border p-5 text-center ${
+              customer.current_balance > 0
+                ? "border-danger/10 bg-danger-light"
+                : customer.current_balance < 0
+                  ? "border-success/10 bg-success-light"
+                  : "border-border bg-surface-alt"
+            }`}
+          >
             <p className="text-senior-sm font-medium text-ink-secondary">
               {customer.current_balance > 0
                 ? t("customer.youWillReceive")

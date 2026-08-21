@@ -60,13 +60,13 @@ export default function BankWalletTab({ userId }: { userId: string }) {
             {t("bank.disclaimer")}
           </p>
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-border bg-surface p-4 shadow-card">
+            <div className="rounded-2xl border border-accent/10 bg-accent-light p-4 shadow-card">
               <p className="text-senior-xs font-medium text-ink-secondary">{t("bank.totalBank")}</p>
-              <Amount value={totalBank} className="text-senior-xl font-bold text-ink" />
+              <Amount value={totalBank} className="text-senior-xl font-bold text-accent-dark" />
             </div>
-            <div className="rounded-2xl border border-border bg-surface p-4 shadow-card">
+            <div className="rounded-2xl border border-accent/10 bg-accent-light p-4 shadow-card">
               <p className="text-senior-xs font-medium text-ink-secondary">{t("bank.totalWallet")}</p>
-              <Amount value={totalWallet} className="text-senior-xl font-bold text-ink" />
+              <Amount value={totalWallet} className="text-senior-xl font-bold text-accent-dark" />
             </div>
           </div>
         </>

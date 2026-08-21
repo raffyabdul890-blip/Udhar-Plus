@@ -24,15 +24,32 @@ export default function DashboardShell({
   fullName,
   shopName,
   onboardingCompleted: initialOnboardingCompleted,
+  initialTab,
 }: {
   userId: string;
   fullName: string | null;
   shopName: string | null;
   onboardingCompleted: boolean;
+  /** From the `?tab=` URL param (resolved server-side in app/page.tsx) — lets a refresh/PWA relaunch restore the screen the user was on instead of always opening Dashboard. */
+  initialTab: BottomTabId;
 }) {
   const [onboardingCompleted, setOnboardingCompleted] = useState(initialOnboardingCompleted);
-  const [activeTab, setActiveTab] = useState<BottomTabId>("dashboard");
+  const [activeTab, setActiveTab] = useState<BottomTabId>(initialTab);
   const [pendingAction, setPendingAction] = useState<QuickActionId | null>(null);
+
+  // Mirrors the active tab into the URL (?tab=khata) via the raw History API —
+  // deliberately not next/navigation's router, which would re-run the server
+  // component (it reads searchParams) on every tab tap, adding a network
+  // round-trip to what is otherwise an instant client-side swap and breaking
+  // offline tab switching. Passing the existing history.state through keeps
+  // Next's own router bookkeeping for this entry intact. replaceState (not
+  // pushState) matches the app's existing single-history-entry navigation —
+  // this only fixes what a refresh restores, not the back/forward stack.
+  function handleTabChange(tab: BottomTabId) {
+    setActiveTab(tab);
+    const search = tab === "dashboard" ? "" : `?tab=${tab}`;
+    window.history.replaceState(window.history.state, "", `${window.location.pathname}${search}`);
+  }
 
   useEffect(() => {
     // Checked post-mount (not in a lazy useState initializer) to avoid a hydration
@@ -59,13 +76,13 @@ export default function DashboardShell({
   const sectionTitle = NAV_ITEMS.some((item) => item.id === activeTab) ? t(`nav.${activeTab}`) : "Udhar Plus";
 
   function handleQuickAction(action: QuickActionId) {
-    setActiveTab(action === "expense" ? "cashbook" : "khata");
+    handleTabChange(action === "expense" ? "cashbook" : "khata");
     setPendingAction(action);
   }
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col lg:max-w-6xl lg:flex-row">
-      <DesktopSidebar active={activeTab} onChange={setActiveTab} primaryLabel={primaryLabel} />
+      <DesktopSidebar active={activeTab} onChange={handleTabChange} primaryLabel={primaryLabel} />
 
       <div className="flex min-h-screen flex-1 flex-col lg:min-h-0">
         <div
@@ -82,7 +99,7 @@ export default function DashboardShell({
               userId={userId}
               shopLabel={primaryLabel}
               onQuickAction={handleQuickAction}
-              onNavigateToTab={setActiveTab}
+              onNavigateToTab={handleTabChange}
             />
           )}
           {activeTab === "khata" && (
@@ -112,12 +129,12 @@ export default function DashboardShell({
           {activeTab === "reports" && <ReportsTab userId={userId} shopLabel={primaryLabel} />}
           {activeTab === "bank" && <BankWalletTab userId={userId} />}
           {activeTab === "more" && (
-            <MoreTab userId={userId} fullName={fullName} onNavigateToTab={setActiveTab} />
+            <MoreTab userId={userId} fullName={fullName} onNavigateToTab={handleTabChange} />
           )}
         </div>
       </div>
 
-      <BottomNav active={activeTab} onChange={setActiveTab} />
+      <BottomNav active={activeTab} onChange={handleTabChange} />
 
       {needsOnboarding && (
         <OnboardingModal userId={userId} onComplete={() => setOnboardingCompleted(true)} />

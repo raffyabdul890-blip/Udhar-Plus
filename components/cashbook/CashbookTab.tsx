@@ -171,9 +171,9 @@ export default function CashbookTab({
 
       {view === "cashbook" ? (
         <>
-          <div className="rounded-2xl border border-border bg-surface p-6 text-center shadow-card">
+          <div className="rounded-2xl border border-primary/10 bg-primary-light p-6 text-center shadow-card">
             <p className="text-senior-sm font-medium text-ink-secondary">{t("cashbook.currentCash")}</p>
-            <Amount value={currentBalance} className="text-senior-3xl font-bold text-ink" />
+            <Amount value={currentBalance} className="text-senior-3xl font-bold text-primary" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -271,11 +271,11 @@ export default function CashbookTab({
         </>
       ) : (
         <>
-          <div className="rounded-2xl border border-border bg-surface p-6 text-center shadow-card">
+          <div className="rounded-2xl border border-warning/10 bg-warning-light p-6 text-center shadow-card">
             <p className="text-senior-sm font-medium text-ink-secondary">
               {datePreset === "today" ? t("cashbook.totalExpensesToday") : t("cashbook.totalExpenses")}
             </p>
-            <Amount value={expensesTotal} className="text-senior-3xl font-bold text-danger" />
+            <Amount value={expensesTotal} className="text-senior-3xl font-bold text-warning" />
             <p className="text-senior-xs text-ink-tertiary">
               {t(expensesInRange.length === 1 ? "cashbook.expensesCount" : "cashbook.expensesCountPlural", {
                 count: expensesInRange.length,

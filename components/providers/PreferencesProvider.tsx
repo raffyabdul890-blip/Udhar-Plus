@@ -27,7 +27,7 @@ type PreferencesContextValue = {
 const PreferencesContext = createContext<PreferencesContextValue | null>(null);
 
 const THEME_COLOR: Record<"light" | "dark", string> = {
-  light: "#F7F7F8",
+  light: "#F5FAFE",
   dark: "#0B0C10",
 };
 

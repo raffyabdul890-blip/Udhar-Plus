@@ -4,40 +4,49 @@ Audience note: primary users skew older and may have reduced vision, dexterity, 
 familiarity. Every rule below exists to reduce misreads and mis-taps. When in doubt, choose the larger,
 higher-contrast, more forgiving option.
 
-Visual direction: light, clean, professional — modern Pakistani shopkeeper/business app, not a
-consumer-flashy or dark "fintech" theme. Purple is the brand/navigation color; green and red/orange are
-reserved for financial meaning (money in vs. money out), used carefully rather than saturating the whole UI.
+Visual direction: **Ocean Wave** — white/very-light-blue surfaces, clean, modern, professional, a
+Pakistani shopkeeper/business app rather than a consumer-flashy or dark "fintech" theme. Ocean blue is the
+brand/navigation color; green, red/orange, and a secondary purple-blue accent are reserved for financial
+meaning (Receivable, Payable, Cash, Bank & Wallet, etc.), used carefully rather than saturating the whole UI.
 
 ## 1. Color System
 
 | Token | Hex | Role |
 |---|---|---|
-| `canvas` | `#F7F7F8` | App background |
+| `canvas` | `#F5FAFE` | App background — white with a whisper of blue |
 | `surface` | `#FFFFFF` | Card / modal background |
-| `surface-alt` | `#F3F4F6` | Secondary surface, hover/pressed backgrounds, stat-card fills |
-| `surface-dim` | `#EDEDF0` | Skeleton/shimmer base |
-| `border` | `#E5E7EB` | Default hairline border |
-| `border-strong` | `#D1D5DB` | Stronger border, rarely needed |
-| `ink` | `#171717` | Primary text |
-| `ink-secondary` | `#6B7280` | Secondary text |
-| `ink-tertiary` | `#9CA3AF` | Placeholder / disabled / least-important text |
-| `primary` / `primary-dark` / `primary-light` | `#6D4AFF` / `#5B3AE0` / `#F1EEFF` | Brand purple — navigation, links, secondary actions, neutral-but-important CTAs |
+| `surface-alt` | `#EAF2F9` | Secondary surface, hover/pressed backgrounds, stat-card fills |
+| `surface-dim` | `#E3EDF5` | Skeleton/shimmer base |
+| `border` | `#DCE7F0` | Default hairline border |
+| `border-strong` | `#C2D5E3` | Stronger border, rarely needed |
+| `ink` | `#111827` | Primary text |
+| `ink-secondary` | `#64748B` | Secondary text |
+| `ink-tertiary` | `#93A5B8` | Placeholder / disabled / least-important text |
+| `primary` / `primary-dark` / `primary-light` | `#0369A1` / `#075985` / `#E0F2FE` | Brand ocean blue — navigation, links, secondary actions, Cash/Sale tints |
+| `accent` / `accent-dark` / `accent-light` | `#4F46E5` / `#4338CA` / `#E0E7FF` | Secondary purple-blue accent — Bank & Wallet, Add Customer tints |
 | `success` / `success-dark` / `success-light` | `#16A34A` / `#15803D` / `#DCFCE7` | Positive financial actions: Receive Payment, Cash In, Payable |
-| `danger` / `danger-dark` / `danger-light` | `#DC2626` / `#B91C1C` / `#FEE2E2` | **Destructive actions only** (delete customer/item/entry) — soft-tinted, not a heavy fill |
-| `warning` / `warning-light` | `#D97706` / `#FEF3C7` | Legitimate "negative" financial actions: Give Udhaar, Cash Out, low-stock badges |
+| `danger` / `danger-dark` / `danger-light` | `#DC2626` / `#B91C1C` / `#FEE2E2` | **Destructive actions only** (delete customer/item/entry), also Give Udhaar/Receivable tints — soft-tinted, not a heavy fill |
+| `warning` / `warning-light` | `#D97706` / `#FEF3C7` | Legitimate "negative" financial actions: Give Udhaar CTA, Cash Out, Expenses, low-stock badges |
 
 ### Usage rules
 - Background is **always** `canvas`; cards/modals sit on `surface`. Never reintroduce the old dark
-  `brand-black`/`brand-charcoal` tokens — they were fully retired in the light-theme rebuild.
+  `brand-black`/`brand-charcoal` tokens or the retired purple `primary` (`#6D4AFF`) — this is the Ocean Wave
+  palette, and hex values belong in `app/globals.css` custom properties only, never hardcoded in components.
 - Body text is `ink` at full opacity. Secondary/meta text uses `ink-secondary`; only placeholders and the
   least important labels use `ink-tertiary`.
-- **Red/orange is used carefully, never as a page-wide wash.** `danger` (soft, `danger-light` background) is
-  reserved for destructive delete/remove confirmations. `warning` (solid fill) is the CTA color for
-  legitimate outflow actions — Give Udhaar's "Save Udhaar" button, Cash Out, expenses — coding them as
-  "negative" without turning the whole screen red.
-- `success` (solid fill) is the CTA color for Receive Payment / Cash In / any inflow action.
-- `primary` (purple) is the default brand color: navigation, active states, neutral primary buttons, links,
-  and badges/backgrounds that aren't specifically financial-positive or -negative.
+- **Color is used carefully, never as a page-wide wash.** `danger` (soft, `danger-light` background) is
+  reserved for destructive delete/remove confirmations and Receivable/Give-Udhaar tints. `warning` (solid
+  fill) is the CTA color for legitimate outflow actions — Give Udhaar's "Save Udhaar" button, Cash Out,
+  Expenses — coding them as "negative" without turning the whole screen red.
+- `success` (solid fill) is the CTA color for Receive Payment / Cash In / Payable tints.
+- `primary` (ocean blue) is the default brand color: navigation, active states, neutral primary buttons,
+  links, and the Cash/Sale tint.
+- `accent` (purple-blue) is reserved for Bank & Wallet and Add Customer — keeps those visually distinct from
+  the primary blue used for Cash/Sale without introducing a third unrelated hue.
+- Hero/summary balance cards (Dashboard totals, Khata totals, Cashbook current cash, Sales total, Bank &
+  Wallet totals, Customer Detail balance) get a light `-light` tint background matching their financial
+  category; dense multi-metric grids (Reports) and plain lists stay neutral `surface` so the app doesn't read
+  as over-colored.
 - Minimum contrast ratio: **4.5:1** for body text, **3:1** for large text (≥ 24px) and icons — verified for
   every token pair above against `surface`/`canvas` before shipping.
 
@@ -89,7 +98,7 @@ and unambiguous. Always use the shared `<Button>` component (`components/ui/Butt
 ### Variants
 | Variant | Style | Use for |
 |---|---|---|
-| `primary` | Solid `primary` purple | Default/neutral primary actions |
+| `primary` | Solid `primary` ocean blue | Default/neutral primary actions |
 | `success` | Solid `success` green | Receive Payment, Cash In, any inflow save |
 | `warning` | Solid `warning` orange | Give Udhaar, Cash Out, expense save — "negative" but routine actions |
 | `danger` | Soft `danger-light` fill, `danger` text | Destructive delete/remove only |

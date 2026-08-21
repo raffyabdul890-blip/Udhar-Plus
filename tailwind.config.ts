@@ -34,9 +34,12 @@ const config: Config = {
         ink: "var(--color-ink)", // Primary text
         "ink-secondary": "var(--color-ink-secondary)", // Secondary text
         "ink-tertiary": "var(--color-ink-tertiary)", // Placeholder / disabled text
-        primary: "var(--color-primary)", // Brand purple — nav, links, secondary actions
+        primary: "var(--color-primary)", // Brand ocean blue — nav, links, secondary actions
         "primary-dark": "var(--color-primary-dark)", // Pressed state
         "primary-light": "var(--color-primary-light)", // Soft tinted background (badges, secondary buttons)
+        accent: "var(--color-accent)", // Secondary purple-blue accent (Bank & Wallet, Add Customer)
+        "accent-dark": "var(--color-accent-dark)",
+        "accent-light": "var(--color-accent-light)",
         success: "var(--color-success)", // Positive financial actions (Cash In, Receive Payment)
         "success-dark": "var(--color-success-dark)",
         "success-light": "var(--color-success-light)",
@@ -67,7 +70,7 @@ const config: Config = {
       boxShadow: {
         card: "0 1px 2px rgba(var(--shadow-color),0.04), 0 1px 3px rgba(var(--shadow-color),0.06)",
         elevated: "0 8px 24px rgba(var(--shadow-color),0.10), 0 2px 6px rgba(var(--shadow-color),0.06)",
-        "focus-ring": "0 0 0 3px rgba(109,74,255,0.35)",
+        "focus-ring": "0 0 0 3px rgba(3,105,161,0.35)",
       },
       backgroundImage: {
         "shimmer-gradient":

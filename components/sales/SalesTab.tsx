@@ -107,9 +107,9 @@ export default function SalesTab({ userId, shopLabel }: { userId: string; shopLa
         }}
       />
 
-      <div className="rounded-2xl border border-border bg-surface p-6 text-center shadow-card">
+      <div className="rounded-2xl border border-primary/10 bg-primary-light p-6 text-center shadow-card">
         <p className="text-senior-sm font-medium text-ink-secondary">{t("sales.salesLabel")}</p>
-        <Amount value={totalSales} className="text-senior-3xl font-bold text-success-dark" />
+        <Amount value={totalSales} className="text-senior-3xl font-bold text-primary" />
         <p className="text-senior-xs text-ink-tertiary">
           {t(sales.length === 1 ? "sales.salesCount" : "sales.salesCountPlural", { count: sales.length })}
         </p>

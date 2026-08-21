@@ -33,7 +33,7 @@ export default function BankLogoBadge({
 }) {
   const institution = getFinancialInstitution(bankCode);
   const label = institution?.shortLabel ?? bankCode.slice(0, 3).toUpperCase();
-  const color = institution?.color ?? "#6D4AFF";
+  const color = institution?.color ?? "#0369A1";
   const textColor = isLightColor(color) ? "#171717" : "#ffffff";
 
   return (

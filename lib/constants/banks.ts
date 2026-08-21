@@ -32,7 +32,7 @@ export const PAKISTANI_BANKS: FinancialInstitution[] = [
   { code: "fwb", name: "First Women Bank", shortLabel: "FWB", category: "bank", color: "#B0175E" },
   { code: "bankislami", name: "BankIslami", shortLabel: "BIP", category: "bank", color: "#00A99D" },
   { code: "samba", name: "Samba Bank", shortLabel: "SMB", category: "bank", color: "#5A2A82" },
-  { code: "other-bank", name: "Other Bank", shortLabel: "?", category: "bank", color: "#6D4AFF" },
+  { code: "other-bank", name: "Other Bank", shortLabel: "?", category: "bank", color: "#0369A1" },
 ];
 
 export const PAKISTANI_WALLETS: FinancialInstitution[] = [
@@ -41,7 +41,7 @@ export const PAKISTANI_WALLETS: FinancialInstitution[] = [
   { code: "sadapay", name: "SadaPay", shortLabel: "SP", category: "wallet", color: "#7B2FF7" },
   { code: "nayapay", name: "NayaPay", shortLabel: "NP", category: "wallet", color: "#00D2A0" },
   { code: "raast", name: "Raast", shortLabel: "RST", category: "wallet", color: "#DA0000" },
-  { code: "other-wallet", name: "Other Wallet", shortLabel: "?", category: "wallet", color: "#6D4AFF" },
+  { code: "other-wallet", name: "Other Wallet", shortLabel: "?", category: "wallet", color: "#0369A1" },
 ];
 
 export const FINANCIAL_INSTITUTIONS: FinancialInstitution[] = [
