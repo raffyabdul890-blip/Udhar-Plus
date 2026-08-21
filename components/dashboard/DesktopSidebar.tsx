@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Icon from "@/components/icons/Icon";
 import { NAV_ITEMS, type BottomTabId } from "@/components/dashboard/BottomNav";
 import { usePreferences } from "@/components/providers/PreferencesProvider";
@@ -25,9 +26,13 @@ export default function DesktopSidebar({
       className="hidden w-64 shrink-0 flex-col gap-1 border-e border-border bg-surface px-3 py-6 lg:flex"
     >
       <div className="flex items-center gap-2 px-3 pb-6">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-white">
-          <Icon name="khata" size={18} />
-        </div>
+        <Image
+          src="/icons/icon-512.png"
+          alt="Udhar Plus"
+          width={36}
+          height={36}
+          className="h-9 w-9 shrink-0 rounded-lg"
+        />
         <p className="truncate text-senior-lg font-bold text-ink">{primaryLabel}</p>
       </div>
 

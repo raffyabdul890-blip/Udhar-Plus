@@ -2,10 +2,10 @@
 
 import { useRef, useState, type SubmitEvent } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { RecaptchaVerifier, signInWithPhoneNumber, type ConfirmationResult } from "firebase/auth";
 import TextField from "@/components/ui/TextField";
 import Button from "@/components/ui/Button";
-import Icon from "@/components/icons/Icon";
 import { createClient } from "@/lib/supabase/client";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import { hydrateFromCloud } from "@/lib/sync/syncEngine";
@@ -174,9 +174,14 @@ export default function LoginPage() {
       <div id={RECAPTCHA_CONTAINER_ID} />
 
       <div className="flex flex-col items-center gap-3 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white shadow-card">
-          <Icon name="khata" size={28} />
-        </div>
+        <Image
+          src="/icons/icon-512.png"
+          alt="Udhar Plus"
+          width={56}
+          height={56}
+          priority
+          className="h-14 w-14 rounded-2xl shadow-card"
+        />
         <div>
           <h1 className="text-senior-2xl font-bold text-ink">Udhar Plus</h1>
           <p className="mt-1 text-senior-base text-ink-secondary">
