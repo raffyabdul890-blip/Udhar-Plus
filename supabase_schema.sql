@@ -284,6 +284,14 @@ create policy "owner can delete own cashbook entries"
 -- business_settings (one row per user — More tab profile, shown on the
 -- Customers header too). user_id is the primary key by design: it's a
 -- singleton per account, and this lets Supabase upserts key off it directly.
+--
+-- language includes 'ur-Latn' (Roman Urdu) directly here now — on a database
+-- where this table doesn't exist yet, CREATE TABLE below creates it correctly
+-- from the start. The DO block + ALTER further down is a separate safety net
+-- for a database where the table already exists with the older ('en','ur')
+-- constraint from before Roman Urdu was added — both paths converge on the
+-- same end state, so this file stays correct to rerun regardless of which
+-- state a given database starts in.
 -- ---------------------------------------------------------------------------
 create table if not exists public.business_settings (
   user_id uuid primary key references auth.users (id) on delete cascade,
@@ -291,7 +299,7 @@ create table if not exists public.business_settings (
   phone text,
   address text,
   category text,
-  language text not null default 'en' check (language in ('en', 'ur')),
+  language text not null default 'en' check (language in ('en', 'ur', 'ur-Latn')),
   theme text not null default 'light' check (theme in ('light', 'dark', 'system')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
