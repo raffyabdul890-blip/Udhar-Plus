@@ -301,10 +301,35 @@ alter table public.business_settings add column if not exists theme text not nul
   check (theme in ('light', 'dark', 'system'));
 
 -- Roman Urdu ("ur-Latn" — the BCP-47 subtag for Urdu written in Latin script)
--- added as a third language option alongside English and Urdu. Postgres names
--- an inline column check constraint "<table>_<column>_check" by default, so
--- that's the constraint being replaced here.
-alter table public.business_settings drop constraint if exists business_settings_language_check;
+-- added as a third language option alongside English and Urdu.
+--
+-- Looks up whatever check constraint currently enforces business_settings.language
+-- via pg_constraint instead of assuming Postgres's default "<table>_<column>_check"
+-- name — safe even if it was ever renamed (a name-only drop would otherwise silently
+-- no-op, leaving the old, stricter constraint enforced alongside the new one and
+-- still rejecting 'ur-Latn'). Idempotent: safe to run any number of times, and the
+-- new constraint is a strict superset of the old one ('en'/'ur' were already
+-- validated into every existing row, so adding 'ur-Latn' to the allowed set can
+-- never fail against existing data) — no column, default, or row data changes.
+do $$
+declare
+  existing_constraint text;
+begin
+  for existing_constraint in
+    select distinct con.conname
+    from pg_constraint con
+    join pg_class rel on rel.oid = con.conrelid
+    join pg_namespace nsp on nsp.oid = rel.relnamespace
+    join pg_attribute att on att.attrelid = rel.oid and att.attnum = any(con.conkey)
+    where nsp.nspname = 'public'
+      and rel.relname = 'business_settings'
+      and att.attname = 'language'
+      and con.contype = 'c'
+  loop
+    execute format('alter table public.business_settings drop constraint %I', existing_constraint);
+  end loop;
+end $$;
+
 alter table public.business_settings add constraint business_settings_language_check
   check (language in ('en', 'ur', 'ur-Latn'));
 
