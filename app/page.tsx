@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import DashboardShell from "@/components/dashboard/DashboardShell";
-import { isBottomTabId } from "@/components/dashboard/BottomNav";
+import { isBottomTabId } from "@/lib/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function Home({
